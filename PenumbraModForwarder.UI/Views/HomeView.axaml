@@ -5,9 +5,9 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="clr-namespace:PenumbraModForwarder.UI.ViewModels"
-    xmlns:models="clr-namespace:PenumbraModForwarder.Common.Models;assembly=PenumbraModForwarder.Common"
     xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
     xmlns:gif="clr-namespace:Avalonia.Labs.Gif;assembly=Avalonia.Labs.Gif"
+    xmlns:models1="clr-namespace:PenumbraModForwarder.Common.Models;assembly=CommonLib"
     x:DataType="viewModels:HomeViewModel"
     mc:Ignorable="d"
     d:DesignWidth="800"
@@ -32,7 +32,7 @@
 
             <ItemsControl ItemsSource="{Binding RecentMods}">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="models:XmaMods">
+                    <DataTemplate x:DataType="models1:XmaMods">
                         <Border Margin="5" Padding="10" CornerRadius="4" Background="{StaticResource BackgroundBrush}">
                             <StackPanel Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="10">

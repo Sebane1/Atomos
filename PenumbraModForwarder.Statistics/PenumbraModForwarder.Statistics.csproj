@@ -13,12 +13,12 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\PenumbraModForwarder.Common\PenumbraModForwarder.Common.csproj" />
+      <Folder Include="Enums\" />
+      <Folder Include="Interfaces\" />
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Enums\" />
-      <Folder Include="Interfaces\" />
+      <ProjectReference Include="..\CommonLib\CommonLib\CommonLib.csproj" />
     </ItemGroup>
 
 </Project>

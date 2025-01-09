@@ -19,7 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\PenumbraModForwarder.Common\PenumbraModForwarder.Common.csproj" />
+      <ProjectReference Include="..\CommonLib\CommonLib\CommonLib.csproj" />
       <ProjectReference Include="..\PenumbraModForwarder.FileMonitor\PenumbraModForwarder.FileMonitor.csproj" />
       <ProjectReference Include="..\PenumbraModForwarder.Statistics\PenumbraModForwarder.Statistics.csproj" />
     </ItemGroup>

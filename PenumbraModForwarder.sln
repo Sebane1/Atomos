@@ -3,15 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenZipExtractor", "SevenZipExtractor\SevenZipExtractor\SevenZipExtractor.csproj", "{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.BackgroundWorker", "PenumbraModForwarder.BackgroundWorker\PenumbraModForwarder.BackgroundWorker.csproj", "{E275A602-B1AA-4517-8E02-0DDAD4A2CDCF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.Watchdog", "PenumbraModForwarder.Watchdog\PenumbraModForwarder.Watchdog.csproj", "{04BBEC1F-7177-4434-A310-7A4C29062094}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.Common", "PenumbraModForwarder.Common\PenumbraModForwarder.Common.csproj", "{A0236EEA-E0F2-420E-A5F8-900C0AF5055E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.Common.Tests", "PenumbraModForwarder.Common.Tests\PenumbraModForwarder.Common.Tests.csproj", "{648BB67D-5668-44A7-BA73-E20CF440DD4B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.BackgroundWorker.Tests", "PenumbraModForwarder.BackgroundWorker.Tests\PenumbraModForwarder.BackgroundWorker.Tests.csproj", "{122C718F-BFF4-456C-9246-6F137A08B040}"
 EndProject
@@ -27,7 +21,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.Consol
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedResources", "SharedResources\SharedResources.csproj", "{06419E81-1761-4EB7-AC10-358FE3C360A4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PenumbraModForwarder.Updater", "PenumbraModForwarder.Updater\PenumbraModForwarder.Updater.csproj", "{4E224194-1606-4503-9D9E-EDED80B2FDBD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommonLib", "CommonLib\CommonLib\CommonLib.csproj", "{0498DDE3-C73B-4E2C-A2C8-C10242E088C0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenZipExtractor", "CommonLib\SevenZipExtractor\SevenZipExtractor\SevenZipExtractor.csproj", "{63468817-F53D-4B43-9175-95A3EDD50A3A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,10 +31,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}.Debug|Any CPU.Build.0 = Debug|x64
-		{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}.Release|Any CPU.ActiveCfg = Release|x64
-		{C123A38D-F9A0-4F58-8F92-C8FDE7669EA1}.Release|Any CPU.Build.0 = Release|x64
 		{E275A602-B1AA-4517-8E02-0DDAD4A2CDCF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E275A602-B1AA-4517-8E02-0DDAD4A2CDCF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E275A602-B1AA-4517-8E02-0DDAD4A2CDCF}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -51,14 +43,6 @@ Global
 		{04BBEC1F-7177-4434-A310-7A4C29062094}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{04BBEC1F-7177-4434-A310-7A4C29062094}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{04BBEC1F-7177-4434-A310-7A4C29062094}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A0236EEA-E0F2-420E-A5F8-900C0AF5055E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A0236EEA-E0F2-420E-A5F8-900C0AF5055E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A0236EEA-E0F2-420E-A5F8-900C0AF5055E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A0236EEA-E0F2-420E-A5F8-900C0AF5055E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{648BB67D-5668-44A7-BA73-E20CF440DD4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{648BB67D-5668-44A7-BA73-E20CF440DD4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{648BB67D-5668-44A7-BA73-E20CF440DD4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{648BB67D-5668-44A7-BA73-E20CF440DD4B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{122C718F-BFF4-456C-9246-6F137A08B040}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{122C718F-BFF4-456C-9246-6F137A08B040}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{122C718F-BFF4-456C-9246-6F137A08B040}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -87,10 +71,14 @@ Global
 		{06419E81-1761-4EB7-AC10-358FE3C360A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{06419E81-1761-4EB7-AC10-358FE3C360A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{06419E81-1761-4EB7-AC10-358FE3C360A4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4E224194-1606-4503-9D9E-EDED80B2FDBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4E224194-1606-4503-9D9E-EDED80B2FDBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4E224194-1606-4503-9D9E-EDED80B2FDBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4E224194-1606-4503-9D9E-EDED80B2FDBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0498DDE3-C73B-4E2C-A2C8-C10242E088C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0498DDE3-C73B-4E2C-A2C8-C10242E088C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0498DDE3-C73B-4E2C-A2C8-C10242E088C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0498DDE3-C73B-4E2C-A2C8-C10242E088C0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63468817-F53D-4B43-9175-95A3EDD50A3A}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{63468817-F53D-4B43-9175-95A3EDD50A3A}.Debug|Any CPU.Build.0 = Debug|x64
+		{63468817-F53D-4B43-9175-95A3EDD50A3A}.Release|Any CPU.ActiveCfg = Release|x64
+		{63468817-F53D-4B43-9175-95A3EDD50A3A}.Release|Any CPU.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

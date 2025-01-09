@@ -21,10 +21,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\PenumbraModForwarder.Common\PenumbraModForwarder.Common.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.0" />
       <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="9.0.0" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
@@ -41,6 +37,10 @@
       <None Include="..\SharedResources\Assets\Icons\png\Exclamation_mark_cat_image.png">
         <Link>Exclamation_mark_cat_image.png</Link>
       </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\CommonLib\CommonLib\CommonLib.csproj" />
     </ItemGroup>
 
 </Project>
