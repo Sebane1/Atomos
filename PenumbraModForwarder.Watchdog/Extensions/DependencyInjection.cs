@@ -7,6 +7,7 @@ using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.Watchdog.Interfaces;
 using PenumbraModForwarder.Watchdog.Services;
+using DownloadUpdater = PenumbraModForwarder.Common.Services.DownloadUpdater;
 
 namespace PenumbraModForwarder.Watchdog.Extensions;
 
@@ -20,6 +21,12 @@ public static class DependencyInjection
         services.AddSingleton<IConfigurationSetup, ConfigurationSetup>();
         services.AddSingleton<IProcessManager, ProcessManager>();
         services.AddSingleton<IFileStorage, FileStorage>();
+        services.AddSingleton<IAria2Service>(_ =>
+        {
+            var aria2InstallFolder = Path.Combine(AppContext.BaseDirectory, "aria2");
+            return new Aria2Service(aria2InstallFolder);
+        });
+        services.AddSingleton<IDownloadUpdater, DownloadUpdater>();
 
         return services;
     }

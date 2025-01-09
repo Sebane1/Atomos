@@ -83,7 +83,7 @@ internal class Program
         var semVersion = version == null
             ? "Local Build"
             : $"{version.Major}.{version.Minor}.{version.Build}";
-
+#if !DEBUG 
         // Check for update
         if (_updateService.NeedsUpdateAsync(semVersion, "CouncilOfTsukuyomi/ModForwarder").GetAwaiter().GetResult())
         {
@@ -92,6 +92,8 @@ internal class Program
             Environment.Exit(0);
         }
 
+        _processManager.Run();
+#endif
         _processManager.Run();
     }
 
