@@ -23,7 +23,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedResources", "SharedRe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommonLib", "CommonLib\CommonLib\CommonLib.csproj", "{0498DDE3-C73B-4E2C-A2C8-C10242E088C0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenZipExtractor", "CommonLib\SevenZipExtractor\SevenZipExtractor\SevenZipExtractor.csproj", "{63468817-F53D-4B43-9175-95A3EDD50A3A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenZipExtractor", "SevenZipExtractor\SevenZipExtractor\SevenZipExtractor.csproj", "{568FD1DA-F101-428B-A7CC-A8F3B4128D8B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -75,10 +75,10 @@ Global
 		{0498DDE3-C73B-4E2C-A2C8-C10242E088C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0498DDE3-C73B-4E2C-A2C8-C10242E088C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0498DDE3-C73B-4E2C-A2C8-C10242E088C0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{63468817-F53D-4B43-9175-95A3EDD50A3A}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{63468817-F53D-4B43-9175-95A3EDD50A3A}.Debug|Any CPU.Build.0 = Debug|x64
-		{63468817-F53D-4B43-9175-95A3EDD50A3A}.Release|Any CPU.ActiveCfg = Release|x64
-		{63468817-F53D-4B43-9175-95A3EDD50A3A}.Release|Any CPU.Build.0 = Release|x64
+		{568FD1DA-F101-428B-A7CC-A8F3B4128D8B}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{568FD1DA-F101-428B-A7CC-A8F3B4128D8B}.Debug|Any CPU.Build.0 = Debug|x64
+		{568FD1DA-F101-428B-A7CC-A8F3B4128D8B}.Release|Any CPU.ActiveCfg = Release|x64
+		{568FD1DA-F101-428B-A7CC-A8F3B4128D8B}.Release|Any CPU.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

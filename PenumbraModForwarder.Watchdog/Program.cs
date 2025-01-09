@@ -85,7 +85,7 @@ internal class Program
             : $"{version.Major}.{version.Minor}.{version.Build}";
 
         // Check for update
-        if (_updateService.NeedsUpdateAsync(semVersion).GetAwaiter().GetResult())
+        if (_updateService.NeedsUpdateAsync(semVersion, "CouncilOfTsukuyomi/ModForwarder").GetAwaiter().GetResult())
         {
             // Run the Updater
             _logger.Info("Update detected, launching updater");
