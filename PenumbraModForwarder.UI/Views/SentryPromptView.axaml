@@ -29,20 +29,24 @@
                     Foreground="{StaticResource TextBrush}"
                     HorizontalAlignment="Center" />
 
-                <!-- Description text -->
-                <TextBlock
-                    Text="Sentry helps us track crashes and errors so we can improve the user experience. No personal data is collected."
-                    FontSize="14"
-                    Foreground="{StaticResource TextBrush}"
-                    TextWrapping="Wrap" />
-
-                <!-- Additional info about Sentry -->
-                <TextBlock
-                    TextWrapping="Wrap"
-                    Foreground="{StaticResource TextBrush}">
-                    <Run Text="Sentry is a platform that collects application crash details to help developers diagnose and fix errors more quickly. " />
-                </TextBlock>
-
+                <!-- Sentry information -->
+                <StackPanel Spacing="5">
+                    <TextBlock
+                        Text="• Sentry helps track crashes and errors to improve your experience."
+                        FontSize="14"
+                        Foreground="{StaticResource TextBrush}"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        Text="• No personal data is collected."
+                        FontSize="14"
+                        Foreground="{StaticResource TextBrush}"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        Text="• You can change this preference at any time on the Settings page."
+                        FontSize="14"
+                        Foreground="{StaticResource TextBrush}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
 
                 <!-- Button panel -->
                 <StackPanel Orientation="Horizontal"
