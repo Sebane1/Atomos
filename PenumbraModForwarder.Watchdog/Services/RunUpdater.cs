@@ -41,16 +41,27 @@ public class RunUpdater : IRunUpdater
             return false;
         }
 
+        static string EscapeForCmd(string argument)
+        {
+            // Simple approach to escape double quotes so they stay intact if needed
+            return argument.Replace("\"", "\\\"");
+        }
+
+        // Escape and quote all arguments
+        var escapedVersion = EscapeForCmd(versionNumber);
+        var escapedRepo = EscapeForCmd(gitHubRepo);
+        var escapedPath = EscapeForCmd(installationPath);
+        var escapedSentry = EscapeForCmd(enableSentry.ToString().ToLowerInvariant());
+
+        var arguments = $"\"{escapedVersion}\" \"{escapedRepo}\" \"{escapedPath}\" \"{escapedSentry}\"";
+
+        if (!string.IsNullOrWhiteSpace(programToRunAfterInstallation))
+        {
+            var escapedProgram = EscapeForCmd(programToRunAfterInstallation);
+            arguments += $" \"{escapedProgram}\"";
+        }
+
         _logger.Info("Updater retrieved at {updaterExePath}. Attempting to run.", updaterExePath);
-
-        // Build base arguments
-        var baseArguments = $"{versionNumber} {gitHubRepo} \"{installationPath}\" " +
-                            $"{enableSentry.ToString().ToLowerInvariant()}";
-
-        // Append programToRunAfterInstallation only if it has a value
-        var arguments = string.IsNullOrWhiteSpace(programToRunAfterInstallation)
-            ? baseArguments
-            : $"{baseArguments} {programToRunAfterInstallation}";
 
         var processStartInfo = new ProcessStartInfo
         {

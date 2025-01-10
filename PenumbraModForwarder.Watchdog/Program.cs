@@ -103,16 +103,14 @@ internal class Program
             
             var programToRunAfterInstallation = Path.GetFileName(currentExePath);
 
-            // Pass the required arguments to the updater
-            _runUpdater.RunDownloadedUpdaterAsync(
-                semVersion,                                        
-                "CouncilOfTsukuyomi/ModForwarder",          
-                installPath,                                        
-                enableSentry                          
-                // programToRunAfterInstallation            
-            ).GetAwaiter().GetResult();
-
-            Environment.Exit(0);
+            var updateResult = _runUpdater.RunDownloadedUpdaterAsync(semVersion, "CouncilOfTsukuyomi/ModForwarder", installPath, enableSentry).GetAwaiter().GetResult();
+            _logger.Info($"Update call returned: {updateResult}");
+            
+            if (updateResult)
+            {
+                _logger.Info("Update detected, exiting");
+                Environment.Exit(0);
+            }
         }
 
         // Proceed if no update is required
