@@ -205,11 +205,11 @@ public class SettingsViewModel : ViewModelBase
         {
             var propertyPath = GetPropertyPath(descriptor);
 
-            _configurationService.UpdateConfigValue(
-                config => SetNestedPropertyValue(config, descriptor),
-                propertyPath,
-                descriptor.Value
-            );
+            // _configurationService.UpdateConfigValue(
+            //     config => SetNestedPropertyValue(config, descriptor),
+            //     propertyPath,
+            //     descriptor.Value
+            // );
 
             var taskId = Guid.NewGuid().ToString();
             var configurationChange = new
@@ -235,60 +235,60 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    private void SetNestedPropertyValue(ConfigurationModel config, ConfigurationPropertyDescriptor descriptor)
-    {
-        var propertyPath = GetPropertyPath(descriptor);
-        var properties = propertyPath.Split('.');
-
-        object currentObject = config;
-        for (int i = 0; i < properties.Length; i++)
-        {
-            var propertyName = properties[i];
-            var propertyInfo = currentObject.GetType().GetProperty(propertyName);
-
-            if (propertyInfo == null)
-            {
-                throw new Exception(
-                    $"Property '{propertyName}' not found on object of type '{currentObject.GetType().Name}'"
-                );
-            }
-
-            if (i == properties.Length - 1)
-            {
-                object finalValue;
-
-                if (propertyInfo.PropertyType == typeof(int) && descriptor.Value is decimal decimalVal)
-                {
-                    finalValue = Convert.ToInt32(decimalVal);
-                }
-                else if (propertyInfo.PropertyType == typeof(string))
-                {
-                    finalValue = descriptor.Value?.ToString();
-                }
-                else if (propertyInfo.PropertyType == typeof(List<string>)
-                         && descriptor.Value is IEnumerable<string> stringEnum)
-                {
-                    finalValue = new List<string>(stringEnum);
-                }
-                else
-                {
-                    finalValue = Convert.ChangeType(descriptor.Value, propertyInfo.PropertyType);
-                }
-
-                propertyInfo.SetValue(currentObject, finalValue);
-
-                _logger.Debug(
-                    "Set value of property '{PropertyPath}' to '{Value}'",
-                    propertyPath,
-                    finalValue
-                );
-            }
-            else
-            {
-                currentObject = propertyInfo.GetValue(currentObject);
-            }
-        }
-    }
+    // private void SetNestedPropertyValue(ConfigurationModel config, ConfigurationPropertyDescriptor descriptor)
+    // {
+    //     var propertyPath = GetPropertyPath(descriptor);
+    //     var properties = propertyPath.Split('.');
+    //
+    //     object currentObject = config;
+    //     for (int i = 0; i < properties.Length; i++)
+    //     {
+    //         var propertyName = properties[i];
+    //         var propertyInfo = currentObject.GetType().GetProperty(propertyName);
+    //
+    //         if (propertyInfo == null)
+    //         {
+    //             throw new Exception(
+    //                 $"Property '{propertyName}' not found on object of type '{currentObject.GetType().Name}'"
+    //             );
+    //         }
+    //
+    //         if (i == properties.Length - 1)
+    //         {
+    //             object finalValue;
+    //
+    //             if (propertyInfo.PropertyType == typeof(int) && descriptor.Value is decimal decimalVal)
+    //             {
+    //                 finalValue = Convert.ToInt32(decimalVal);
+    //             }
+    //             else if (propertyInfo.PropertyType == typeof(string))
+    //             {
+    //                 finalValue = descriptor.Value?.ToString();
+    //             }
+    //             else if (propertyInfo.PropertyType == typeof(List<string>)
+    //                      && descriptor.Value is IEnumerable<string> stringEnum)
+    //             {
+    //                 finalValue = new List<string>(stringEnum);
+    //             }
+    //             else
+    //             {
+    //                 finalValue = Convert.ChangeType(descriptor.Value, propertyInfo.PropertyType);
+    //             }
+    //
+    //             propertyInfo.SetValue(currentObject, finalValue);
+    //
+    //             _logger.Debug(
+    //                 "Set value of property '{PropertyPath}' to '{Value}'",
+    //                 propertyPath,
+    //                 finalValue
+    //             );
+    //         }
+    //         else
+    //         {
+    //             currentObject = propertyInfo.GetValue(currentObject);
+    //         }
+    //     }
+    // }
 
     private string GetPropertyPath(ConfigurationPropertyDescriptor descriptor)
     {
