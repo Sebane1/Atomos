@@ -27,6 +27,7 @@ public static class DependencyInjection
             return new Aria2Service(aria2InstallFolder);
         });
         services.AddSingleton<IDownloadUpdater, DownloadUpdater>();
+        services.AddSingleton<IRunUpdater, RunUpdater>();
 
         return services;
     }

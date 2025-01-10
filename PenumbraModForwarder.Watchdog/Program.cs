@@ -18,17 +18,20 @@ internal class Program
     private readonly IProcessManager _processManager;
     private readonly IConfigurationSetup _configurationSetup;
     private readonly IUpdateService _updateService;
+    private readonly IRunUpdater _runUpdater;
 
     public Program(
         IConfigurationService configurationService,
         IProcessManager processManager,
         IConfigurationSetup configurationSetup,
-        IUpdateService updateService)
+        IUpdateService updateService,
+        IRunUpdater runUpdater)
     {
         _configurationService = configurationService;
         _processManager = processManager;
         _configurationSetup = configurationSetup;
         _updateService = updateService;
+        _runUpdater = runUpdater;
     }
 
     private static void Main(string[] args)
@@ -54,8 +57,12 @@ internal class Program
 
     public void Run(string[] args)
     {
-        // Toggle Sentry based on config
-        if ((bool)_configurationService.ReturnConfigValue(c => c.Common.EnableSentry))
+        // Determine if Sentry should be enabled
+        var enableSentry = (bool)_configurationService.ReturnConfigValue(
+            c => c.Common.EnableSentry
+        );
+
+        if (enableSentry)
         {
             DependencyInjection.EnableSentryLogging();
         }
@@ -83,23 +90,40 @@ internal class Program
         var semVersion = version == null
             ? "Local Build"
             : $"{version.Major}.{version.Minor}.{version.Build}";
-#if !DEBUG 
+
         // Check for update
-        if (_updateService.NeedsUpdateAsync(semVersion, "CouncilOfTsukuyomi/ModForwarder").GetAwaiter().GetResult())
+        if (_updateService.NeedsUpdateAsync(semVersion, "CouncilOfTsukuyomi/ModForwarder")
+            .GetAwaiter().GetResult())
         {
-            // Run the Updater
             _logger.Info("Update detected, launching updater");
+
+            // Gather install path from current assembly location
+            var currentExePath = assembly.Location;
+            var installPath = Path.GetDirectoryName(currentExePath) ?? string.Empty;
+            
+            var programToRunAfterInstallation = Path.GetFileName(currentExePath);
+
+            // Pass the required arguments to the updater
+            _runUpdater.RunDownloadedUpdaterAsync(
+                semVersion,                                        
+                "CouncilOfTsukuyomi/ModForwarder",          
+                installPath,                                        
+                enableSentry                          
+                // programToRunAfterInstallation            
+            ).GetAwaiter().GetResult();
+
             Environment.Exit(0);
         }
 
-        _processManager.Run();
-#endif
+        // Proceed if no update is required
         _processManager.Run();
     }
 
     private void HideConsoleWindow()
     {
-        var showWindow = (bool)_configurationService.ReturnConfigValue(config => config.AdvancedOptions.ShowWatchDogWindow);
+        var showWindow = (bool)_configurationService.ReturnConfigValue(
+            config => config.AdvancedOptions.ShowWatchDogWindow
+        );
         if (showWindow)
         {
             _logger.Info("Showing watchdog window");

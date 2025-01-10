@@ -2,5 +2,10 @@
 
 public interface IRunUpdater
 {
-    Task<bool> RunDownloadedUpdaterAsync(CancellationToken ct);
+    Task<bool> RunDownloadedUpdaterAsync(
+        string versionNumber,
+        string gitHubRepo,
+        string installationPath,
+        bool enableSentry,
+        string? programToRunAfterInstallation = null);
 }
