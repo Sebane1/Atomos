@@ -7,7 +7,7 @@
     Width="400" Height="150" 
     Title="Startup Error"
     TransparencyLevelHint="AcrylicBlur"
-    Background="Transparent"
+    Background="#262626"
     ExtendClientAreaToDecorationsHint="True"
     ExtendClientAreaChromeHints="NoChrome"
     WindowStartupLocation="CenterScreen">

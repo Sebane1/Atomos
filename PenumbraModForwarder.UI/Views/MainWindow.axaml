@@ -15,7 +15,7 @@
         MinWidth="800"
         MinHeight="600"
         TransparencyLevelHint="AcrylicBlur"
-        Background="Transparent"
+        Background="#262626"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
         WindowStartupLocation="CenterScreen">
