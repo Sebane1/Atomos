@@ -41,7 +41,7 @@ public class WebSocketClient : IWebSocketClient, IDisposable
         _webSockets = new Dictionary<string, ClientWebSocket>();
         _notificationService = notificationService;
         _configurationService = configurationService;
-        
+            
         _logger.Debug("WebSocketClient instance created using NLog.");
 
         // Assign a unique ID to help identify outgoing messages
@@ -196,11 +196,26 @@ public class WebSocketClient : IWebSocketClient, IDisposable
         {
             while (webSocket.State == WebSocketState.Open && !_cts.Token.IsCancellationRequested)
             {
-                var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
+                var messageBuilder = new StringBuilder();
+                WebSocketReceiveResult result;
+
+                do
+                {
+                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
+
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        await DisconnectWebSocketAsync(webSocket);
+                        break;
+                    }
+
+                    messageBuilder.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+
+                } while (!result.EndOfMessage && webSocket.State == WebSocketState.Open);
 
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
-                    var messageJson = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    var messageJson = messageBuilder.ToString();
                     var message = JsonConvert.DeserializeObject<WebSocketMessage>(messageJson);
 
                     // Ignore messages that match our own client ID
@@ -230,11 +245,6 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                             await HandleGeneralMessageAsync(message, endpoint);
                             break;
                     }
-                }
-                else if (result.MessageType == WebSocketMessageType.Close)
-                {
-                    await DisconnectWebSocketAsync(webSocket);
-                    break;
                 }
             }
         }
