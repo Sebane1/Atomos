@@ -65,7 +65,7 @@ public class InstallViewModel : ViewModelBase, IDisposable
                 {
                     FileName = fileName,
                     FilePath = file,
-                    IsSelected = true
+                    IsSelected = false
                 });
 
                 _logger.Info("Added file {FileName}", fileName);
