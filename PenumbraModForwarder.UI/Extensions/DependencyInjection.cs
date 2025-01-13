@@ -27,11 +27,7 @@ public static class DependencyInjection
 
         // Services
         services.AddSingleton<ISoundManagerService, SoundManagerService>();
-        services.AddSingleton<IAria2Service>(_ =>
-        {
-            var aria2InstallFolder = Path.Combine(AppContext.BaseDirectory, "aria2");
-            return new Aria2Service(aria2InstallFolder);
-        });
+        services.AddSingleton<IAria2Service>(_ => new Aria2Service(AppContext.BaseDirectory));
         services.AddSingleton<IRegistryHelper, RegistryHelper>();
         services.AddSingleton<IFileLinkingService, FileLinkingService>();
         services.AddSingleton<INotificationService, NotificationService>();
