@@ -21,11 +21,7 @@ public static class DependencyInjection
         services.AddSingleton<IConfigurationSetup, ConfigurationSetup>();
         services.AddSingleton<IProcessManager, ProcessManager>();
         services.AddSingleton<IFileStorage, FileStorage>();
-        services.AddSingleton<IAria2Service>(_ =>
-        {
-            var aria2InstallFolder = Path.Combine(AppContext.BaseDirectory, "aria2");
-            return new Aria2Service(aria2InstallFolder);
-        });
+        services.AddSingleton<IAria2Service>(_ => new Aria2Service(AppContext.BaseDirectory));
         services.AddSingleton<IDownloadUpdater, DownloadUpdater>();
         services.AddSingleton<IRunUpdater, RunUpdater>();
 
