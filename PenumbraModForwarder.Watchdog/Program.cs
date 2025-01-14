@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
@@ -36,8 +37,7 @@ internal class Program
 
     private static void Main(string[] args)
     {
-        bool isNewInstance;
-        using (new Mutex(true, "PenumbraModForwarder.Launcher", out isNewInstance))
+        using (new Mutex(true, "PenumbraModForwarder.Launcher", out var isNewInstance))
         {
             if (!isNewInstance)
             {
@@ -51,72 +51,78 @@ internal class Program
 
             var serviceProvider = services.BuildServiceProvider();
             var program = serviceProvider.GetRequiredService<Program>();
-            program.Run(args);
+            program.Run();
         }
     }
 
-    public void Run(string[] args)
+    private void Run()
     {
-        // Determine if Sentry should be enabled
-        var enableSentry = (bool)_configurationService.ReturnConfigValue(
-            c => c.Common.EnableSentry
-        );
-
-        if (enableSentry)
+        try
         {
-            DependencyInjection.EnableSentryLogging();
-        }
-        else
-        {
-            DependencyInjection.DisableSentryLogging();
-        }
+            _configurationSetup.CreateFiles();
 
-        _configurationSetup.CreateFiles();
+            ApplicationBootstrapper.SetWatchdogInitialization();
+            Environment.SetEnvironmentVariable("WATCHDOG_INITIALIZED", "true");
 
-        // Set initialization flag before starting processes
-        ApplicationBootstrapper.SetWatchdogInitialization();
+            var assembly = Assembly.GetExecutingAssembly();
+            var version = assembly.GetName().Version;
+            var semVersion = version == null
+                ? "Local Build"
+                : $"{version.Major}.{version.Minor}.{version.Build}";
 
-        // Set the environment variable for child processes
-        Environment.SetEnvironmentVariable("WATCHDOG_INITIALIZED", "true");
-
-        // Hide the console window on Windows if configured
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            HideConsoleWindow();
-        }
-
-        var assembly = Assembly.GetExecutingAssembly();
-        var version = assembly.GetName().Version;
-        var semVersion = version == null
-            ? "Local Build"
-            : $"{version.Major}.{version.Minor}.{version.Build}";
-
-        // Check for update
-        if (_updateService.NeedsUpdateAsync(semVersion, "CouncilOfTsukuyomi/ModForwarder")
-            .GetAwaiter().GetResult())
-        {
-            _logger.Info("Update detected, launching updater");
-
-            // Gather install path from current assembly location
-            var currentExePath = assembly.Location;
-            var installPath = Path.GetDirectoryName(currentExePath) ?? string.Empty;
-            
-            var programToRunAfterInstallation = Path.GetFileName(currentExePath);
-
-            var updateResult = _runUpdater.RunDownloadedUpdaterAsync(semVersion, "CouncilOfTsukuyomi/ModForwarder", installPath, enableSentry).GetAwaiter().GetResult();
-            _logger.Info($"Update call returned: {updateResult}");
-            
-            if (updateResult)
+            if (_updateService.NeedsUpdateAsync(semVersion, "CouncilOfTsukuyomi/ModForwarder")
+                .GetAwaiter().GetResult())
             {
-                _logger.Info("Update detected, exiting");
-                Environment.Exit(0);
+                _logger.Info("Update detected, launching updater");
+
+                var currentExePath = assembly.Location;
+                var installPath = Path.GetDirectoryName(currentExePath) ?? AppContext.BaseDirectory;
+
+                var programToRunAfterInstallation = Path.GetFileName(currentExePath);
+
+                var updateResult = _runUpdater
+                    .RunDownloadedUpdaterAsync(
+                        semVersion,
+                        "CouncilOfTsukuyomi/ModForwarder",
+                        installPath,
+                        enableSentry: true,
+                        programToRunAfterInstallation
+                    )
+                    .GetAwaiter()
+                    .GetResult();
+
+                if (updateResult)
+                {
+                    _logger.Info("Update detected, exiting application.");
+                    LogManager.Shutdown();
+                    LogActiveThreads();
+                    Environment.Exit(0);
+                }
             }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                HideConsoleWindow();
+            }
+            _processManager.Run();
         }
-
-        // Proceed if no update is required
-        _processManager.Run();
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "An error occurred.");
+            LogManager.Shutdown();
+            LogActiveThreads();
+            Environment.Exit(1);
+        }
     }
-
+    
+    private void LogActiveThreads()
+    {
+        foreach (ProcessThread thread in Process.GetCurrentProcess().Threads)
+        {
+            _logger.Info($"Thread ID: {thread.Id}, State: {thread.ThreadState}, Priority: {thread.PriorityLevel}");
+        }
+    }
+    
     private void HideConsoleWindow()
     {
         var showWindow = (bool)_configurationService.ReturnConfigValue(

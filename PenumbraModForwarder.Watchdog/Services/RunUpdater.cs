@@ -32,8 +32,7 @@ public class RunUpdater : IRunUpdater
         _logger.Info("Starting updater retrieval...");
         var ct = CancellationToken.None;
 
-        var updaterExePath =
-            await _downloadUpdater.DownloadAndExtractLatestUpdaterAsync(ct);
+        var updaterExePath = await _downloadUpdater.DownloadAndExtractLatestUpdaterAsync(ct);
 
         if (updaterExePath == null)
         {
@@ -43,25 +42,31 @@ public class RunUpdater : IRunUpdater
 
         static string EscapeForCmd(string argument)
         {
-            // Simple approach to escape double quotes so they stay intact if needed
-            return argument.Replace("\"", "\\\"");
+            // Escape double quotes and wrap only the individual argument in quotes
+            return argument.Contains(' ') || argument.Contains('"') 
+                ? $"\"{argument.Replace("\"", "\\\"")}\"" 
+                : argument;
         }
 
-        // Escape and quote all arguments
+        // Escape and prepare all arguments individually
         var escapedVersion = EscapeForCmd(versionNumber);
         var escapedRepo = EscapeForCmd(gitHubRepo);
         var escapedPath = EscapeForCmd(installationPath);
         var escapedSentry = EscapeForCmd(enableSentry.ToString().ToLowerInvariant());
+        var escapedProgramToRun = string.IsNullOrWhiteSpace(programToRunAfterInstallation)
+            ? string.Empty
+            : EscapeForCmd(programToRunAfterInstallation);
 
-        var arguments = $"\"{escapedVersion}\" \"{escapedRepo}\" \"{escapedPath}\" \"{escapedSentry}\"";
-
-        if (!string.IsNullOrWhiteSpace(programToRunAfterInstallation))
+        var arguments = string.Join(" ", new[]
         {
-            var escapedProgram = EscapeForCmd(programToRunAfterInstallation);
-            arguments += $" \"{escapedProgram}\"";
-        }
+            escapedVersion,
+            escapedRepo,
+            escapedPath,
+            escapedSentry,
+            escapedProgramToRun
+        }.Where(arg => !string.IsNullOrWhiteSpace(arg)));
 
-        _logger.Info("Updater retrieved at {updaterExePath}. Attempting to run.", updaterExePath);
+        _logger.Info($"Updater retrieved at {updaterExePath}. Attempting to run with arguments: {arguments}");
 
         var processStartInfo = new ProcessStartInfo
         {

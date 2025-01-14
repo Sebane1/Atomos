@@ -8,15 +8,6 @@
         <Company>PenumbraModForwarder.Launcher</Company>
         <Product>PenumbraModForwarder.Launcher</Product>
         <AssemblyName>PenumbraModForwarder.Launcher</AssemblyName>
-    </PropertyGroup>
-    
-    <!-- Build For Windows -->
-    <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
-        <OutputType>WinExe</OutputType>
-    </PropertyGroup>
-    
-    <!-- Build for Linux -->
-    <PropertyGroup Condition="'$(RuntimeIdentifier)' != 'win-x64'">
         <OutputType>Exe</OutputType>
     </PropertyGroup>
 
