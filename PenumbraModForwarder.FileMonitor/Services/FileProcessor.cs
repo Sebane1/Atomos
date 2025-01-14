@@ -313,7 +313,7 @@ public sealed class FileProcessor : IFileProcessor
         }
     }
 
-    private List<Entry?> GetModEntries(ArchiveFile archiveFile, bool skipPreDt)
+    private List<Entry?> GetModEntries(ArchiveFile archiveFile, bool skipPreviousUpdates)
     {
         return archiveFile.Entries
             .Where(entry =>
@@ -322,13 +322,19 @@ public sealed class FileProcessor : IFileProcessor
                 if (!FileExtensionsConsts.ModFileTypes.Contains(entryExtension))
                     return false;
 
-                if (skipPreDt &&
-                    entry.FileName
-                        .Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries)
-                        .Any(dir => PreDtRegex.IsMatch(dir)))
+                if (skipPreviousUpdates)
                 {
-                    _logger.Info("Skipping file in pre-Dt folder: {FileName}", entry.FileName);
-                    return false;
+                    var pathParts = entry.FileName
+                        .Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    // Check for both PreDT and Endwalker folders
+                    if (pathParts.Any(dir => 
+                            PreDtRegex.IsMatch(dir) || 
+                            dir.Contains("Endwalker", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        _logger.Info("Skipping file from previous update: {FileName}", entry.FileName);
+                        return false;
+                    }
                 }
 
                 return true;
