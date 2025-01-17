@@ -12,7 +12,7 @@ public sealed class FileProcessor : IFileProcessor
 {
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-    private static readonly Regex PreDtRegex = new(@"\[(?i)pre[\s\-]?dt\]?", RegexOptions.Compiled);
+    private static readonly Regex PreDtRegex = new(@"(?i)pre\-?dt", RegexOptions.Compiled);
 
     private readonly IFileStorage _fileStorage;
     private readonly IConfigurationService _configurationService;
@@ -324,13 +324,7 @@ public sealed class FileProcessor : IFileProcessor
 
                 if (skipPreviousUpdates)
                 {
-                    var pathParts = entry.FileName
-                        .Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-
-                    // Check for both PreDT and Endwalker folders
-                    if (pathParts.Any(dir => 
-                            PreDtRegex.IsMatch(dir) || 
-                            dir.Contains("Endwalker", StringComparison.OrdinalIgnoreCase)))
+                    if (PreDtRegex.IsMatch(entry.FileName) || entry.FileName.IndexOf("Endwalker", StringComparison.OrdinalIgnoreCase) != -1)
                     {
                         _logger.Info("Skipping file from previous update: {FileName}", entry.FileName);
                         return false;
