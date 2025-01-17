@@ -9,6 +9,7 @@ using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.Common.Services;
 using PenumbraModForwarder.Statistics.Services;
+using PenumbraModForwarder.UI.Controllers;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Services;
 using PenumbraModForwarder.UI.ViewModels;
@@ -51,6 +52,8 @@ public static class DependencyInjection
             return new FileDialogService(mainWindow);
         });
         services.AddSingleton<IXmaModDisplay, XmaModDisplay>();
+        services.AddSingleton<ITrayIconController, TrayIconController>();
+        services.AddSingleton<ITrayIconManager, TrayIconManager>();
 
         // ViewModels
         services.AddSingleton<MainWindowViewModel>();

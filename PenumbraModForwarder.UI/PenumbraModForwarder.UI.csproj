@@ -45,6 +45,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\PenumbraModForwarder.Statistics\PenumbraModForwarder.Statistics.csproj" />
+      <ProjectReference Include="..\SharedResources\SharedResources.csproj" />
     </ItemGroup>
 
     <ItemGroup>

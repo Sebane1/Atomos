@@ -1,9 +1,11 @@
 using System;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
+using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.ViewModels;
 using PenumbraModForwarder.UI.Views;
 
@@ -64,7 +66,16 @@ public partial class App : Application
                 {
                     DataContext = ActivatorUtilities.CreateInstance<MainWindowViewModel>(_serviceProvider, port)
                 };
+                // NOTE: This is how we would hide the window if we needed to
+                // desktop.MainWindow.WindowState = WindowState.Minimized;
+                // desktop.MainWindow.ShowInTaskbar = false;
+                // desktop.MainWindow.Hide();
             }
+            
+            var trayIconManager = _serviceProvider.GetRequiredService<ITrayIconManager>();
+            trayIconManager.InitializeTrayIcon();
+            
+            trayIconManager.ShowTrayIcon();
         }
 
         base.OnFrameworkInitializationCompleted();
