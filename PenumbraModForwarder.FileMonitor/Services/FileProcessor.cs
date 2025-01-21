@@ -145,7 +145,7 @@ public sealed class FileProcessor : IFileProcessor
             var modEntries = GetModEntries(archiveFile, skipPreDt);
             return modEntries.Any();
         }
-        catch (SevenZipException ex) when (ex.Message.Contains("not a known archive type"))
+        catch (Exception ex) when (ex.Message.Contains("not a known archive type"))
         {
             _logger.Warn("File {FilePath} is not recognized as a valid archive.", filePath);
             return false;
@@ -258,7 +258,7 @@ public sealed class FileProcessor : IFileProcessor
                 _logger.Info("No mod files found in the archive: {ArchiveFileName}", Path.GetFileName(archivePath));
             }
         }
-        catch (SevenZipException ex) when (ex.Message.Contains("not a known archive type"))
+        catch (Exception ex) when (ex.Message.Contains("not a known archive type"))
         {
             _logger.Warn("Unrecognized archive format: {ArchiveFilePath}", archivePath);
             DeleteFileWithRetry(archivePath);
