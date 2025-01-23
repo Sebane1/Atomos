@@ -7,6 +7,7 @@ using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
+using PenumbraModForwarder.Common.Consts;
 using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
@@ -23,6 +24,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
     private readonly IStatisticService _statisticService;
     private readonly IXmaModDisplay _xmaModDisplay;
     private readonly IDownloadManagerService _downloadManagerService;
+    private readonly IFileSizeService _fileSizeService;
     private readonly CompositeDisposable _disposables = new();
     private readonly SemaphoreSlim _statsSemaphore = new(1, 1);
 
@@ -53,12 +55,13 @@ public class HomeViewModel : ViewModelBase, IDisposable
         IStatisticService statisticService,
         IXmaModDisplay xmaModDisplay,
         IWebSocketClient webSocketClient,
-        IDownloadManagerService downloadManagerService)
+        IDownloadManagerService downloadManagerService, IFileSizeService fileSizeService)
     {
         _statisticService = statisticService;
         _xmaModDisplay = xmaModDisplay;
         _webSocketClient = webSocketClient;
         _downloadManagerService = downloadManagerService;
+        _fileSizeService = fileSizeService;
 
         InfoItems = new ObservableCollection<InfoItem>();
         RecentMods = new ObservableCollection<XmaMods>();
@@ -146,6 +149,9 @@ public class HomeViewModel : ViewModelBase, IDisposable
                 ? new InfoItem("Last Mod Installed", lastModInstallation.ModName)
                 : new InfoItem("Last Mod Installed", "None"));
 
+            var modsFolderSizeLabel = _fileSizeService.GetFolderSizeLabel(ConfigurationConsts.ModsPath);
+            newItems.Add(new InfoItem("Mods Folder Size", modsFolderSizeLabel));
+            
             InfoItems = newItems;
         }
         catch (Exception ex)

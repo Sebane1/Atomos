@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddSingleton<IConfigurationListener, ConfigurationListener>();
         services.AddSingleton<IFileStorage, FileStorage>();
         services.AddSingleton<IStatisticService, StatisticService>();
+        services.AddSingleton<IFileSizeService, FileSizeService>();
         services.AddSingleton<IFileDialogService>(provider =>
         {
             var applicationLifetime = Application.Current.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
