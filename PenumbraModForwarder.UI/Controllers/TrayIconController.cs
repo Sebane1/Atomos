@@ -48,8 +48,11 @@ public class TrayIconController : ITrayIconController
                 desktop.MainWindow = new MainWindow(_configurationService);
             }
 
+            desktop.MainWindow.ShowInTaskbar = true;
             desktop.MainWindow.Show();
             desktop.MainWindow.WindowState = WindowState.Normal;
+            desktop.MainWindow.Activate();
+            desktop.MainWindow.Focus();
             _logger.Info("MainWindow shown or restored to normal state.");
         }
         else
