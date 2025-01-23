@@ -206,7 +206,7 @@ public class StatisticService : IStatisticService
                     .OrderByDescending(x => x.InstallationTime)
                     .ToList();
 
-                _logger.Info("Retrieved {Count} mod installations from the database.", mods.Count);
+                _logger.Debug("Retrieved {Count} mod installations from the database.", mods.Count);
                 return mods;
             },
             "Failed to retrieve all installed mods.",
