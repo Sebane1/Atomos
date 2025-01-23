@@ -103,7 +103,7 @@ public class StatisticService : IStatisticService
                     return 0;
                 }
 
-                _logger.Info("Retrieved count for statistic '{Stat}': {Count}", stat, statRecord.Count);
+                _logger.Debug("Retrieved count for statistic '{Stat}': {Count}", stat, statRecord.Count);
                 return statRecord.Count;
             },
             $"Failed to retrieve statistic '{stat}'.",
