@@ -51,8 +51,8 @@ public sealed class FileProcessor : IFileProcessor
 
         if (FileExtensionsConsts.ModFileTypes.Contains(extension))
         {
-            // Decide whether to physically move the file or just organize it locally
-            var finalFilePath = relocateFiles ? MoveFile(filePath) : OrganizeLocalFile(filePath);
+            // Moves the file when RelocateFiles is true; otherwise leaves it in place
+            var finalFilePath = relocateFiles ? MoveFile(filePath) : filePath;
             var fileName = Path.GetFileName(finalFilePath);
 
             onFileMoved?.Invoke(
@@ -66,10 +66,11 @@ public sealed class FileProcessor : IFileProcessor
         }
         else if (FileExtensionsConsts.ArchiveFileTypes.Contains(extension))
         {
+            // Check if the archive contains a mod file
             if (await ArchiveContainsModFileAsync(filePath, cancellationToken))
             {
-                // Decide whether to physically move the file or just organize it locally
-                var finalFilePath = relocateFiles ? MoveFile(filePath) : OrganizeLocalFile(filePath);
+                // Moves the archive file when RelocateFiles is true; otherwise leaves it in place
+                var finalFilePath = relocateFiles ? MoveFile(filePath) : filePath;
                 await ProcessArchiveFileAsync(finalFilePath, cancellationToken, onFilesExtracted);
             }
             else
@@ -182,25 +183,6 @@ public sealed class FileProcessor : IFileProcessor
         DeleteFileWithRetry(filePath);
 
         _logger.Info("File moved from {SourcePath} to {DestinationPath}", filePath, destinationPath);
-        return destinationPath;
-    }
-
-    private string OrganizeLocalFile(string filePath)
-    {
-        var originalDirectory = Path.GetDirectoryName(filePath) ?? string.Empty;
-        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
-        var destinationFolder = Path.Combine(originalDirectory, fileNameWithoutExtension);
-
-        // Create a local subdirectory named after the file (minus extension)
-        _fileStorage.CreateDirectory(destinationFolder);
-
-        var destinationPath = Path.Combine(destinationFolder, Path.GetFileName(filePath));
-        _fileStorage.CopyFile(filePath, destinationPath, overwrite: true);
-
-        // Clean up the original
-        DeleteFileWithRetry(filePath);
-
-        _logger.Info("File placed in subfolder: {DestinationPath}", destinationPath);
         return destinationPath;
     }
 
@@ -324,7 +306,8 @@ public sealed class FileProcessor : IFileProcessor
 
                 if (skipPreviousUpdates)
                 {
-                    if (PreDtRegex.IsMatch(entry.FileName) || entry.FileName.IndexOf("Endwalker", StringComparison.OrdinalIgnoreCase) != -1)
+                    if (PreDtRegex.IsMatch(entry.FileName) 
+                        || entry.FileName.IndexOf("Endwalker", StringComparison.OrdinalIgnoreCase) != -1)
                     {
                         _logger.Info("Skipping file from previous update: {FileName}", entry.FileName);
                         return false;
