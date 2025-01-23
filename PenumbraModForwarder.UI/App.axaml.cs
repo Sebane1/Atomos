@@ -67,9 +67,7 @@ public partial class App : Application
                     DataContext = ActivatorUtilities.CreateInstance<MainWindowViewModel>(_serviceProvider, port)
                 };
                 // NOTE: This is how we would hide the window if we needed to
-                // desktop.MainWindow.WindowState = WindowState.Minimized;
-                // desktop.MainWindow.ShowInTaskbar = false;
-                // desktop.MainWindow.Hide();
+                HideMainWindow();
             }
             
             var trayIconManager = _serviceProvider.GetRequiredService<ITrayIconManager>();
@@ -79,5 +77,21 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    public void HideMainWindow()
+    {
+        if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
+            desktop.MainWindow != null)
+        {
+            // Minimize it (helpful on some platforms)
+            desktop.MainWindow.WindowState = WindowState.Minimized;
+
+            // Remove from taskbar
+            desktop.MainWindow.ShowInTaskbar = false;
+
+            // Finally hide
+            desktop.MainWindow.Hide();
+        }
     }
 }

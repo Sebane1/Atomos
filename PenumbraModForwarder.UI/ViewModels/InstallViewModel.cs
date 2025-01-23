@@ -13,6 +13,7 @@ using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.Common.Models;
 using PenumbraModForwarder.UI.Events;
 using PenumbraModForwarder.UI.Interfaces;
+using PenumbraModForwarder.UI.Views;
 using ReactiveUI;
 
 namespace PenumbraModForwarder.UI.ViewModels;
@@ -27,12 +28,27 @@ public class InstallViewModel : ViewModelBase, IDisposable
     private string _currentTaskId;
     private bool _isSelectionVisible;
 
+    private StandaloneInstallWindow _standaloneWindow;
+
     public ObservableCollection<FileItemViewModel> Files { get; } = new();
 
+    /// <summary>
+    /// Whether the file selection UI is visible. If set to false, closes the standalone window if it's open.
+    /// </summary>
     public bool IsSelectionVisible
     {
         get => _isSelectionVisible;
-        set => this.RaiseAndSetIfChanged(ref _isSelectionVisible, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _isSelectionVisible, value);
+
+            // If the user interface is no longer visible, close the standalone window
+            if (!value && _standaloneWindow != null)
+            {
+                _standaloneWindow.Close();
+                _standaloneWindow = null;
+            }
+        }
     }
 
     public ReactiveCommand<Unit, Unit> InstallCommand { get; }
@@ -72,13 +88,16 @@ public class InstallViewModel : ViewModelBase, IDisposable
             }
 
             _logger.Info("Selected {FileCount} files", Files.Count);
-
             IsSelectionVisible = true;
 
             await _soundManagerService.PlaySoundAsync(
                 SoundType.GeneralChime,
                 volume: 1.0f
             );
+
+            // Show the standalone install window
+            _standaloneWindow = new StandaloneInstallWindow(this);
+            _standaloneWindow.Show();
         });
     }
 
@@ -99,8 +118,8 @@ public class InstallViewModel : ViewModelBase, IDisposable
         };
 
         await _webSocketClient.SendMessageAsync(responseMessage, "/install");
-
         IsSelectionVisible = false;
+
         _logger.Info("User selected files sent: {SelectedFiles}", selectedFiles);
     }
 
@@ -123,6 +142,14 @@ public class InstallViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        // Unsubscribe from the event to avoid memory leaks
         _webSocketClient.FileSelectionRequested -= OnFileSelectionRequested;
+
+        // Close the standalone window if it exists
+        if (_standaloneWindow != null)
+        {
+            _standaloneWindow.Close();
+            _standaloneWindow = null;
+        }
     }
 }

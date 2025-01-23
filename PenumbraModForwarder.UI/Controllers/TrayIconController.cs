@@ -1,41 +1,75 @@
-﻿using System.Reactive;
+﻿using System;
+using System.Reactive;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Microsoft.Extensions.DependencyInjection;
+using NLog;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Views;
+using PenumbraModForwarder.UI.ViewModels;
 using ReactiveUI;
 
 namespace PenumbraModForwarder.UI.Controllers;
 
 public class TrayIconController : ITrayIconController
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+    
+    
+    public ReactiveCommand<Unit, Unit> ShowCommand { get; }
+    public ReactiveCommand<Unit, Unit> ExitCommand { get; }
+    
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
     public TrayIconController()
     {
+        _logger.Info("Initializing TrayIconController.");
         ShowCommand = ReactiveCommand.Create(ShowMainWindow);
         ExitCommand = ReactiveCommand.Create(ExitApplication);
     }
 
-    public ReactiveCommand<Unit, Unit> ShowCommand { get; }
-    public ReactiveCommand<Unit, Unit> ExitCommand { get; }
-    
+    /// <summary>
+    /// Shows the main window if it doesn't exist, or is hidden/minimized.
+    /// </summary>
     public void ShowMainWindow()
     {
-        if (App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            _logger.Info("Request to show MainWindow.");
+
             if (desktop.MainWindow == null)
             {
+                _logger.Info("MainWindow is null, creating new instance.");
                 desktop.MainWindow = new MainWindow();
             }
+
             desktop.MainWindow.Show();
             desktop.MainWindow.WindowState = WindowState.Normal;
+            _logger.Info("MainWindow shown or restored to normal state.");
+        }
+        else
+        {
+            _logger.Warn("Could not show MainWindow because ApplicationLifetime is not a IClassicDesktopStyleApplicationLifetime.");
         }
     }
-    
-    public void ExitApplication()
+
+    /// <summary>
+    /// Shuts down the application.
+    /// </summary>
+    private void ExitApplication()
     {
-        if (App.Current.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        _logger.Info("Request to exit application.");
+
+        if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            _logger.Info("Shutting down application via desktop lifetime.");
             desktop.Shutdown();
+        }
+        else
+        {
+            _logger.Warn("Could not shut down application; no classic desktop lifetime found.");
         }
     }
 }
