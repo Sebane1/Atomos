@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
+using PenumbraModForwarder.Common.Interfaces;
 using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Views;
 using PenumbraModForwarder.UI.ViewModels;
@@ -15,6 +16,7 @@ public class TrayIconController : ITrayIconController
 {
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
     
+    private readonly IConfigurationService _configurationService;
     
     public ReactiveCommand<Unit, Unit> ShowCommand { get; }
     public ReactiveCommand<Unit, Unit> ExitCommand { get; }
@@ -23,8 +25,9 @@ public class TrayIconController : ITrayIconController
     /// <summary>
     /// Constructor.
     /// </summary>
-    public TrayIconController()
+    public TrayIconController(IConfigurationService configurationService)
     {
+        _configurationService = configurationService;
         _logger.Info("Initializing TrayIconController.");
         ShowCommand = ReactiveCommand.Create(ShowMainWindow);
         ExitCommand = ReactiveCommand.Create(ExitApplication);
@@ -42,7 +45,7 @@ public class TrayIconController : ITrayIconController
             if (desktop.MainWindow == null)
             {
                 _logger.Info("MainWindow is null, creating new instance.");
-                desktop.MainWindow = new MainWindow();
+                desktop.MainWindow = new MainWindow(_configurationService);
             }
 
             desktop.MainWindow.Show();

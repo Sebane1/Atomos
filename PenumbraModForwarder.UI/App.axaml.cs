@@ -62,12 +62,16 @@ public partial class App : Application
                 int port = int.Parse(args[1]);
                 _logger.Info("Listening on port {Port}", port);
 
-                desktop.MainWindow = new MainWindow
-                {
-                    DataContext = ActivatorUtilities.CreateInstance<MainWindowViewModel>(_serviceProvider, port)
-                };
-                // NOTE: This is how we would hide the window if we needed to
-                HideMainWindow();
+                // Use ActivatorUtilities to create the MainWindow with injected IConfigurationService
+                var mainWindow = ActivatorUtilities.CreateInstance<MainWindow>(_serviceProvider);
+
+                // Then separately create the MainWindowViewModel, injecting the port argument
+                var mainViewModel = ActivatorUtilities.CreateInstance<MainWindowViewModel>(_serviceProvider, port);
+
+                // Finally, assign the view model
+                mainWindow.DataContext = mainViewModel;
+
+                desktop.MainWindow = mainWindow;
             }
             
             var trayIconManager = _serviceProvider.GetRequiredService<ITrayIconManager>();
@@ -77,21 +81,5 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
-    }
-
-    public void HideMainWindow()
-    {
-        if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
-            desktop.MainWindow != null)
-        {
-            // Minimize it (helpful on some platforms)
-            desktop.MainWindow.WindowState = WindowState.Minimized;
-
-            // Remove from taskbar
-            desktop.MainWindow.ShowInTaskbar = false;
-
-            // Finally hide
-            desktop.MainWindow.Hide();
-        }
     }
 }

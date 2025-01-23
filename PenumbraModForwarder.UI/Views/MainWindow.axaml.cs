@@ -1,14 +1,24 @@
 using Avalonia.Controls;
+using Microsoft.Extensions.Configuration;
 using NLog;
+using PenumbraModForwarder.Common.Interfaces;
+using PenumbraModForwarder.UI.Extensions;
 
 namespace PenumbraModForwarder.UI.Views
 {
     public partial class MainWindow : Window
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+        private readonly IConfigurationService _configuration;
 
         public MainWindow()
         {
+            InitializeComponent();
+        }
+        
+        public MainWindow(IConfigurationService configuration)
+        {
+            _configuration = configuration;
             InitializeComponent();
 
             var titleBar = this.FindControl<Grid>("TitleBar");
@@ -24,7 +34,14 @@ namespace PenumbraModForwarder.UI.Views
             this.Get<Button>("MinimizeButton").Click += (s, e) =>
             {
                 _logger.Info("Minimize button clicked");
-                WindowState = WindowState.Minimized;
+                if ((bool)_configuration.ReturnConfigValue(x => x.AdvancedOptions.MinimiseToTray))
+                {
+                    HiddenWindows.HideMainWindow();
+                }
+                else
+                {
+                    WindowState = WindowState.Minimized;
+                }
             };
 
             this.Get<Button>("CloseButton").Click += (s, e) =>

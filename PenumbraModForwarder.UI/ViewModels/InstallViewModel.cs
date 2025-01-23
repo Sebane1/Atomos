@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Newtonsoft.Json;
 using NLog;
@@ -94,10 +96,15 @@ public class InstallViewModel : ViewModelBase, IDisposable
                 SoundType.GeneralChime,
                 volume: 1.0f
             );
-
-            // Show the standalone install window
-            _standaloneWindow = new StandaloneInstallWindow(this);
-            _standaloneWindow.Show();
+            
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                if (!desktop.MainWindow.IsVisible)
+                {
+                    _standaloneWindow = new StandaloneInstallWindow(this);
+                    _standaloneWindow.Show();
+                }
+            }
         });
     }
 
