@@ -101,7 +101,7 @@ public class ProcessManager : IProcessManager, IDisposable
             WorkingDirectory = projectDirectory,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            RedirectStandardInput = true // CHANGED
+            RedirectStandardInput = true
         };
 
         // Copy environment variables
@@ -110,6 +110,7 @@ public class ProcessManager : IProcessManager, IDisposable
             startInfo.EnvironmentVariables[entry.Key.ToString()] = entry.Value?.ToString();
         }
 
+        // Force DEV mode environment variables
         startInfo.EnvironmentVariables["WATCHDOG_INITIALIZED"] = "true";
         startInfo.EnvironmentVariables["DEV_MODE"] = "true";
 
@@ -152,7 +153,6 @@ public class ProcessManager : IProcessManager, IDisposable
         return process;
     }
 
-    // CHANGED: Added RedirectStandardInput = true to allow sending a shutdown command.
     private Process StartProdProcess(string executableName, string port)
     {
         string executablePath = Path.Combine(AppContext.BaseDirectory, executableName);
@@ -175,9 +175,16 @@ public class ProcessManager : IProcessManager, IDisposable
             WorkingDirectory = executableDir,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            RedirectStandardInput = true // CHANGED
+            RedirectStandardInput = true
         };
 
+        // Copy environment variables (including custom ones)
+        foreach (DictionaryEntry entry in Environment.GetEnvironmentVariables())
+        {
+            startInfo.EnvironmentVariables[entry.Key.ToString()] = entry.Value?.ToString();
+        }
+
+        // Mark that the background process is under watchdog's control
         startInfo.EnvironmentVariables["WATCHDOG_INITIALIZED"] = "true";
 
         var process = new Process { StartInfo = startInfo };
@@ -273,8 +280,7 @@ public class ProcessManager : IProcessManager, IDisposable
                         _logger.Warn(ex, "Unable to send 'shutdown' to Background Worker");
                     }
                 }
-
-                // If there's a main window, close it too (in case it has one, but usually console won't)
+                
                 _backgroundServiceProcess.CloseMainWindow();
 
                 // Wait for up to 5 seconds for the process to exit
