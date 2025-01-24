@@ -76,32 +76,31 @@ public class ConfigurationListener : IConfigurationListener
         // Only apply changes that matter on Windows
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            return;
+            if (e is { PropertyName: "Common.FileLinkingEnabled", NewValue: bool shouldLinkFiles })
+            {
+                if (shouldLinkFiles)
+                {
+                    _fileLinkingService.EnableFileLinking();
+                }
+                else
+                {
+                    _fileLinkingService.DisableFileLinking();
+                }
+            }
+
+            if (e is { PropertyName: "Common.StartOnBoot", NewValue: bool shouldStartOnBoot })
+            {
+                if (shouldStartOnBoot)
+                {
+                    _fileLinkingService.EnableStartup();
+                }
+                else
+                {
+                    _fileLinkingService.DisableStartup();
+                }
+            }
         }
 
-        if (e is { PropertyName: "Common.FileLinkingEnabled", NewValue: bool shouldLinkFiles })
-        {
-            if (shouldLinkFiles)
-            {
-                _fileLinkingService.EnableFileLinking();
-            }
-            else
-            {
-                _fileLinkingService.DisableFileLinking();
-            }
-        }
-
-        if (e is { PropertyName: "Common.StartOnBoot", NewValue: bool shouldStartOnBoot })
-        {
-            if (shouldStartOnBoot)
-            {
-                _fileLinkingService.EnableStartup();
-            }
-            else
-            {
-                _fileLinkingService.DisableStartup();
-            }
-        }
 
         if (e is { PropertyName: "Common.EnableSentry", NewValue: bool shouldEnableSentry })
         {
