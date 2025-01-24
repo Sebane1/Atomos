@@ -23,6 +23,11 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        services.AddAutoMapper(cfg =>
+        {
+            cfg.AddProfile<ConvertConfiguration>();
+        });
+        
         // Register ConfigurationModel as a singleton
         services.AddSingleton<ConfigurationModel>();
 

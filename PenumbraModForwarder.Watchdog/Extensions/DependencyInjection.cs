@@ -15,6 +15,11 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        services.AddAutoMapper(cfg =>
+        {
+            cfg.AddProfile<ConvertConfiguration>();
+        });
+        
         services.SetupLogging();
         services.AddSingleton<IConfigurationService, ConfigurationService>();
         services.AddSingleton<IUpdateService, UpdateService>();

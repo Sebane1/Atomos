@@ -14,6 +14,11 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        services.AddAutoMapper(cfg =>
+        {
+            cfg.AddProfile<ConvertConfiguration>();
+        });
+        
         services.SetupLogging();
         services.AddSingleton<ISoundManagerService, SoundManagerService>();
         services.AddSingleton<IInstallingService, InstallingService>();

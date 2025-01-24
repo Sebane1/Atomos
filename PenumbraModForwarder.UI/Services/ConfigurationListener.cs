@@ -25,16 +25,54 @@ public class ConfigurationListener : IConfigurationListener
         _fileLinkingService = fileLinkingService;
 
         StartListening();
+        InitializeConfigurationState();
     }
 
+    /// <summary>
+    /// Hook the ConfigurationService event so that future changes are picked up.
+    /// </summary>
     private void StartListening()
     {
-        // Replaces Serilog's _logger.Debug(...) with NLog's
         _logger.Debug("Configuration Listen Events hooked");
-
         _configurationService.ConfigurationChanged += ConfigurationServiceOnConfigurationChanged;
     }
 
+    /// <summary>
+    /// Run the same logic you would in the events, but do it once on startup.
+    /// This ensures you pick up any changes that happened before the UI ran.
+    /// </summary>
+    private void InitializeConfigurationState()
+    {
+        var config = _configurationService.GetConfiguration();
+        
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            if (config.Common.FileLinkingEnabled)
+            {
+                _fileLinkingService.EnableFileLinking();
+            }
+
+            if (config.Common.StartOnBoot)
+            {
+                _fileLinkingService.EnableStartup();
+            }
+        }
+
+        if (config.Common.EnableSentry)
+        {
+            _logger.Debug("EnableSentry triggered during initialization");
+            DependencyInjection.EnableSentryLogging();
+        }
+        else
+        {
+            _logger.Debug("DisableSentry triggered during initialization");
+            DependencyInjection.DisableSentryLogging();
+        }
+    }
+
+    /// <summary>
+    /// Event handler that fires whenever the configuration changes at runtime.
+    /// </summary>
     private void ConfigurationServiceOnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
     {
         _logger.Debug($"Detected change in {e.PropertyName}");
@@ -44,6 +82,7 @@ public class ConfigurationListener : IConfigurationListener
             _xivLauncherService.EnableAutoStartWatchdog(shouldAutoStart);
         }
 
+        // Only apply changes that matter on Windows
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             return;

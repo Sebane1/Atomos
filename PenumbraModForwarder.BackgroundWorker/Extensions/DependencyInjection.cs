@@ -14,6 +14,11 @@ namespace PenumbraModForwarder.BackgroundWorker.Extensions
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services, int port)
         {
+            services.AddAutoMapper(cfg =>
+            {
+                cfg.AddProfile<ConvertConfiguration>();
+            });
+            
             services.SetupLogging();
             
             services.AddHostedService(provider => new Worker(
