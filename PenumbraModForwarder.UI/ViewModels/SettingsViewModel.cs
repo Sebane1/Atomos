@@ -24,8 +24,26 @@ public class SettingsViewModel : ViewModelBase
     private readonly IConfigurationService _configurationService;
     private readonly IFileDialogService _fileDialogService;
     private readonly IWebSocketClient _webSocketClient;
+    
+    public ObservableCollection<ConfigurationGroup> AllGroups { get; } = new();
+        
+    private ObservableCollection<ConfigurationGroup> _filteredGroups = new();
+    public ObservableCollection<ConfigurationGroup> FilteredGroups
+    {
+        get => _filteredGroups;
+        set => this.RaiseAndSetIfChanged(ref _filteredGroups, value);
+    }
 
-    public ObservableCollection<ConfigurationGroup> Groups { get; } = new();
+    private string _searchTerm;
+    public string SearchTerm
+    {
+        get => _searchTerm;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _searchTerm, value);
+            FilterSettings();
+        }
+    }
 
     public SettingsViewModel(
         IConfigurationService configurationService,
@@ -42,7 +60,11 @@ public class SettingsViewModel : ViewModelBase
     private void LoadConfigurationSettings()
     {
         var configurationModel = _configurationService.GetConfiguration();
+        // Populate AllGroups instead of Groups:
         LoadPropertiesFromModel(configurationModel);
+
+        // After loading is done, sync AllGroups to FilteredGroups.
+        FilteredGroups = new ObservableCollection<ConfigurationGroup>(AllGroups);
     }
 
     private void LoadPropertiesFromModel(
@@ -81,7 +103,6 @@ public class SettingsViewModel : ViewModelBase
                     ParentDescriptor = parentDescriptor,
                     GroupName = groupName
                 };
-
                 LoadPropertiesFromModel(nestedModelInstance, nestedDescriptor, groupName);
             }
             else
@@ -99,19 +120,20 @@ public class SettingsViewModel : ViewModelBase
                 descriptor.Value = prop.GetValue(model);
 
                 // If the property is a path, attach a "BrowseCommand"
-                if ((prop.PropertyType == typeof(string) || prop.PropertyType == typeof(List<string>))
-                    && displayName.Contains("Path", StringComparison.OrdinalIgnoreCase))
+                if ((prop.PropertyType == typeof(string) || prop.PropertyType == typeof(List<string>)) &&
+                    displayName.Contains("Path", StringComparison.OrdinalIgnoreCase))
                 {
                     descriptor.BrowseCommand = ReactiveCommand.CreateFromTask(
                         () => ExecuteBrowseCommand(descriptor)
                     );
                 }
 
-                var group = Groups.FirstOrDefault(g => g.GroupName == groupName);
+                // Get the group from AllGroups
+                var group = AllGroups.FirstOrDefault(g => g.GroupName == groupName);
                 if (group == null)
                 {
                     group = new ConfigurationGroup(groupName);
-                    Groups.Add(group);
+                    AllGroups.Add(group);
                 }
 
                 // Check for duplicates
@@ -172,7 +194,6 @@ public class SettingsViewModel : ViewModelBase
                     initialDirectory,
                     $"Select {descriptor.DisplayName}"
                 );
-
                 if (!string.IsNullOrEmpty(selectedPath))
                 {
                     descriptor.Value = selectedPath;
@@ -205,12 +226,6 @@ public class SettingsViewModel : ViewModelBase
         {
             var propertyPath = GetPropertyPath(descriptor);
 
-            // _configurationService.UpdateConfigValue(
-            //     config => SetNestedPropertyValue(config, descriptor),
-            //     propertyPath,
-            //     descriptor.Value
-            // );
-
             var taskId = Guid.NewGuid().ToString();
             var configurationChange = new
             {
@@ -235,61 +250,6 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    // private void SetNestedPropertyValue(ConfigurationModel config, ConfigurationPropertyDescriptor descriptor)
-    // {
-    //     var propertyPath = GetPropertyPath(descriptor);
-    //     var properties = propertyPath.Split('.');
-    //
-    //     object currentObject = config;
-    //     for (int i = 0; i < properties.Length; i++)
-    //     {
-    //         var propertyName = properties[i];
-    //         var propertyInfo = currentObject.GetType().GetProperty(propertyName);
-    //
-    //         if (propertyInfo == null)
-    //         {
-    //             throw new Exception(
-    //                 $"Property '{propertyName}' not found on object of type '{currentObject.GetType().Name}'"
-    //             );
-    //         }
-    //
-    //         if (i == properties.Length - 1)
-    //         {
-    //             object finalValue;
-    //
-    //             if (propertyInfo.PropertyType == typeof(int) && descriptor.Value is decimal decimalVal)
-    //             {
-    //                 finalValue = Convert.ToInt32(decimalVal);
-    //             }
-    //             else if (propertyInfo.PropertyType == typeof(string))
-    //             {
-    //                 finalValue = descriptor.Value?.ToString();
-    //             }
-    //             else if (propertyInfo.PropertyType == typeof(List<string>)
-    //                      && descriptor.Value is IEnumerable<string> stringEnum)
-    //             {
-    //                 finalValue = new List<string>(stringEnum);
-    //             }
-    //             else
-    //             {
-    //                 finalValue = Convert.ChangeType(descriptor.Value, propertyInfo.PropertyType);
-    //             }
-    //
-    //             propertyInfo.SetValue(currentObject, finalValue);
-    //
-    //             _logger.Debug(
-    //                 "Set value of property '{PropertyPath}' to '{Value}'",
-    //                 propertyPath,
-    //                 finalValue
-    //             );
-    //         }
-    //         else
-    //         {
-    //             currentObject = propertyInfo.GetValue(currentObject);
-    //         }
-    //     }
-    // }
-
     private string GetPropertyPath(ConfigurationPropertyDescriptor descriptor)
     {
         var pathSegments = new List<string>();
@@ -302,5 +262,54 @@ public class SettingsViewModel : ViewModelBase
         }
 
         return string.Join(".", pathSegments);
+    }
+
+    /// <summary>
+    /// Filters AllGroups into FilteredGroups, matching the property’s DisplayName
+    /// or Description against the SearchTerm.
+    /// </summary>
+    private void FilterSettings()
+    {
+        if (string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            FilteredGroups = new ObservableCollection<ConfigurationGroup>(AllGroups);
+            return;
+        }
+
+        var term = SearchTerm.Trim();
+
+        var newGroups = new List<ConfigurationGroup>();
+        foreach (var group in AllGroups)
+        {
+            // Filter properties in each group
+            var matchingProperties = group.Properties
+                .Where(pd => MatchesSearch(pd, term))
+                .ToList();
+
+            // Only add group if there is at least one matching property
+            if (matchingProperties.Any())
+            {
+                // Create a shallow copy of the group with filtered properties
+                var newGroup = new ConfigurationGroup(group.GroupName);
+                foreach (var match in matchingProperties)
+                {
+                    newGroup.Properties.Add(match);
+                }
+                newGroups.Add(newGroup);
+            }
+        }
+
+        FilteredGroups = new ObservableCollection<ConfigurationGroup>(newGroups);
+    }
+
+    private bool MatchesSearch(ConfigurationPropertyDescriptor descriptor, string term)
+    {
+        bool inName = descriptor.DisplayName
+            .Contains(term, StringComparison.OrdinalIgnoreCase);
+
+        bool inDesc = descriptor.Description != null &&
+                      descriptor.Description.Contains(term, StringComparison.OrdinalIgnoreCase);
+
+        return inName || inDesc;
     }
 }

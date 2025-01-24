@@ -135,31 +135,41 @@
                                                    PathTemplate="{StaticResource PathTemplate}"
                                                    MultiPathTemplate="{StaticResource MultiPathTemplate}"/>
     </UserControl.Resources>
-
-    <ScrollViewer>
-        <TabControl ItemsSource="{Binding Groups}">
-            <!-- Tab Headers -->
-            <TabControl.ItemTemplate>
-                <DataTemplate x:DataType="helpers:ConfigurationGroup">
-                    <TextBlock Text="{Binding GroupName}" FontWeight="Bold" Padding="10"/>
-                </DataTemplate>
-            </TabControl.ItemTemplate>
-
-            <!-- Tab Content -->
-            <TabControl.ContentTemplate>
-                <DataTemplate x:DataType="helpers:ConfigurationGroup">
-                    <StackPanel>
-                        <ItemsControl ItemsSource="{Binding Properties}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="helpers:ConfigurationPropertyDescriptor">
-                                    <ContentControl Content="{Binding}"
-                                                    ContentTemplate="{Binding Converter={StaticResource TypeToControlTemplateConverter}}"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </DataTemplate>
-            </TabControl.ContentTemplate>
-        </TabControl>
-    </ScrollViewer>
+    <Grid RowDefinitions="Auto,*">
+        <TextBox 
+            Margin="10"
+            Height="30"
+            Width="300"
+            Text="{Binding SearchTerm, UpdateSourceTrigger=PropertyChanged}"
+            Watermark="Search for a setting..."
+            HorizontalAlignment="Left"
+            VerticalAlignment="Center" />
+        
+        <ScrollViewer Grid.Row="1">
+            <TabControl ItemsSource="{Binding FilteredGroups}">
+                <TabControl.ItemTemplate>
+                    <DataTemplate x:DataType="helpers:ConfigurationGroup">
+                        <TextBlock Text="{Binding GroupName}"
+                                   FontWeight="Bold"
+                                   Padding="10"/>
+                    </DataTemplate>
+                </TabControl.ItemTemplate>
+                <TabControl.ContentTemplate>
+                    <DataTemplate x:DataType="helpers:ConfigurationGroup">
+                        <StackPanel>
+                            <ItemsControl ItemsSource="{Binding Properties}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="helpers:ConfigurationPropertyDescriptor">
+                                        <ContentControl 
+                                            Content="{Binding}"
+                                            ContentTemplate="{Binding Converter={StaticResource TypeToControlTemplateConverter}}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </TabControl.ContentTemplate>
+            </TabControl>
+        </ScrollViewer>
+    </Grid>
 </UserControl>
