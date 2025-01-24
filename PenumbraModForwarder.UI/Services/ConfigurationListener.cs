@@ -49,24 +49,15 @@ public class ConfigurationListener : IConfigurationListener
         {
             if (config.Common.FileLinkingEnabled)
             {
+                _logger.Debug("File linking enabled in initilization");
                 _fileLinkingService.EnableFileLinking();
             }
 
             if (config.Common.StartOnBoot)
             {
+                _logger.Debug("Start on boot enabled in initilization");
                 _fileLinkingService.EnableStartup();
             }
-        }
-
-        if (config.Common.EnableSentry)
-        {
-            _logger.Debug("EnableSentry triggered during initialization");
-            DependencyInjection.EnableSentryLogging();
-        }
-        else
-        {
-            _logger.Debug("DisableSentry triggered during initialization");
-            DependencyInjection.DisableSentryLogging();
         }
     }
 
