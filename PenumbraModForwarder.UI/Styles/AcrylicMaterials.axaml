@@ -3,23 +3,27 @@
                                  BackgroundSource="Digger"
                                  TintColor="{StaticResource SecondaryColor}"
                                  TintOpacity="0.9"
-                                 MaterialOpacity="0.7"/>
+                                 MaterialOpacity="0.7"
+                                 FallbackColor="{StaticResource SecondaryColor}"/>
     
     <ExperimentalAcrylicMaterial x:Key="NavigationAcrylicMaterial"
                                  BackgroundSource="Digger"
                                  TintColor="{StaticResource SecondaryColor}"
                                  TintOpacity="0.9"
-                                 MaterialOpacity="0.7"/>
+                                 MaterialOpacity="0.7"
+                                 FallbackColor="{StaticResource SecondaryColor}"/>
     
     <ExperimentalAcrylicMaterial x:Key="ContentAcrylicMaterial"
                                  BackgroundSource="Digger"
                                  TintColor="{StaticResource BackgroundColor}"
                                  TintOpacity="0.9"
-                                 MaterialOpacity="0.7"/>
+                                 MaterialOpacity="0.7"
+                                 FallbackColor="{StaticResource BackgroundColor}"/>
     
     <ExperimentalAcrylicMaterial x:Key="StatusBarAcrylicMaterial"
                                  BackgroundSource="Digger"
                                  TintColor="{StaticResource BackgroundColor}"
                                  TintOpacity="0.9"
-                                 MaterialOpacity="0.7"/>
+                                 MaterialOpacity="0.7"
+                                 FallbackColor="{StaticResource BackgroundColor}"/>
 </ResourceDictionary>

@@ -17,7 +17,7 @@
         TransparencyLevelHint="AcrylicBlur"
         Background="#262626"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaChromeHints="PreferSystemChrome"
         WindowStartupLocation="CenterScreen">
 
     <Design.DataContext>
