@@ -17,7 +17,7 @@
         TransparencyLevelHint="AcrylicBlur"
         Background="#262626"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="PreferSystemChrome"
+        ExtendClientAreaChromeHints="NoChrome"
         WindowStartupLocation="CenterScreen">
 
     <Design.DataContext>
@@ -34,27 +34,43 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Text="Penumbra Mod Forwarder" 
-                         VerticalAlignment="Center" 
-                         Margin="10,0" 
-                         Foreground="{DynamicResource TextBrush}" 
-                         Classes="titleText"/>
+                           VerticalAlignment="Center" 
+                           Margin="10,0" 
+                           Foreground="{DynamicResource TextBrush}" 
+                           Classes="titleText"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <!-- Minimize Button -->
                     <Button Name="MinimizeButton" 
                             Classes="windowControl" 
                             HorizontalContentAlignment="Center" 
                             VerticalContentAlignment="Center">
-                        <Path Data="M 0,0 L 10,0"/>
+                        <Path Width="10" Height="2" Stretch="None" Stroke="{DynamicResource TextBrush}" StrokeThickness="1">
+                            <Path.Data>
+                                <StreamGeometry>
+                                    M 0,0 L 10,0
+                                </StreamGeometry>
+                            </Path.Data>
+                        </Path>
                     </Button>
+
+                    <!-- Close Button -->
                     <Button Name="CloseButton" 
                             Classes="windowControl" 
                             HorizontalContentAlignment="Center" 
                             VerticalContentAlignment="Center">
-                        <Path Data="M 0,0 L 10,10 M 0,10 L 10,0"/>
+                        <Path Width="10" Height="10" Stretch="None" Stroke="{DynamicResource TextBrush}" StrokeThickness="1">
+                            <Path.Data>
+                                <StreamGeometry>
+                                    M 0,0 L 10,10 M 0,10 L 10,0
+                                </StreamGeometry>
+                            </Path.Data>
+                        </Path>
                     </Button>
                 </StackPanel>
             </Grid>
         </ExperimentalAcrylicBorder>
+
 
         <!-- Main Content -->
         <Grid Grid.Row="1" ColumnDefinitions="250,*">
