@@ -90,7 +90,7 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
     }
 
     /// <summary>
-    /// Loads the persisted queue state from disk, skipping ignored files.
+    /// Loads the persisted queue state from disk, skipping or removing invalid/ignored files.
     /// </summary>
     public async Task LoadStateAsync()
     {
@@ -104,21 +104,25 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
                 {
                     foreach (var kvp in deserializedQueue)
                     {
+                        // Check if it's on the ignore list
                         if (IgnoreList.IgnoreListStrings.Contains(kvp.Key, StringComparer.InvariantCultureIgnoreCase))
                         {
                             _logger.Info("Skipping ignored file from state: {FullPath}", kvp.Key);
                             continue;
                         }
 
-                        if (_fileStorage.Exists(kvp.Key))
+                        // This is a very rare bug that will cause the program to fail all the time
+                        if (!_fileStorage.Exists(kvp.Key))
                         {
-                            _fileQueue[kvp.Key] = kvp.Value;
-                            _retryCounts[kvp.Key] = 0;
+                            _logger.Warn("File from state no longer exists. Removing from queue: {FullPath}", kvp.Key);
+                            _fileQueue.TryRemove(kvp.Key, out _);
+                            _retryCounts.TryRemove(kvp.Key, out _);
+                            continue;
                         }
-                        else
-                        {
-                            _logger.Warn("File from state no longer exists: {FullPath}", kvp.Key);
-                        }
+
+                        // Otherwise, file is valid, add it to queue
+                        _fileQueue[kvp.Key] = kvp.Value;
+                        _retryCounts[kvp.Key] = 0;
                     }
                 }
                 _logger.Info("File queue state loaded successfully.");
