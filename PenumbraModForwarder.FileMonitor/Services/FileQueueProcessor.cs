@@ -150,7 +150,7 @@ public sealed class FileQueueProcessor : IFileQueueProcessor
         {
             var serializedQueue = JsonConvert.SerializeObject(_fileQueue);
             _fileStorage.Write(_stateFilePath, serializedQueue);
-            _logger.Info("File queue state persisted.");
+            _logger.Debug("File queue state persisted.");
         }
         catch (Exception ex)
         {

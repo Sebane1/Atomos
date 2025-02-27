@@ -111,7 +111,7 @@ public class HomeViewModel : ViewModelBase, IDisposable
                 }
             }
 
-            _logger.Info("Successfully updated the recent mods list without duplicates.");
+            _logger.Debug("Successfully updated the recent mods list without duplicates.");
         }
         catch (Exception ex)
         {
