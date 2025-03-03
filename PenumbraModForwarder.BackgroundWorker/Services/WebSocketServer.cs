@@ -26,6 +26,8 @@ public class WebSocketServer : IWebSocketServer, IDisposable
     private bool _isStarted;
     private int _port;
     private readonly string _serverId;
+    
+    private static readonly ConcurrentDictionary<WebSocket, SemaphoreSlim> SocketLockMap = new();
 
     public event EventHandler<WebSocketMessageEventArgs> MessageReceived;
 
@@ -144,7 +146,8 @@ public class WebSocketServer : IWebSocketServer, IDisposable
             WebSocketReceiveResult result;
             try
             {
-                result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
+                result = await webSocket.ReceiveAsync(
+                    new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
             }
             catch (WebSocketException ex) when (ex.InnerException is HttpListenerException { ErrorCode: 995 })
             {
@@ -250,9 +253,10 @@ public class WebSocketServer : IWebSocketServer, IDisposable
                 var propertyPath = updateData["PropertyPath"].ToString();
                 var newValue = updateData["Value"];
 
-                _logger.Debug("Updating config property at path {Path} to new value: {Value}", propertyPath, newValue);
-                _configurationService.UpdateConfigFromExternal(propertyPath, newValue);
+                _logger.Debug("Updating config property at path {Path} to new value: {Value}",
+                    propertyPath, newValue);
 
+                _configurationService.UpdateConfigFromExternal(propertyPath, newValue);
                 _logger.Debug("Config update completed for property path {Path}", propertyPath);
             }
             else
@@ -287,6 +291,7 @@ public class WebSocketServer : IWebSocketServer, IDisposable
 
     public async Task BroadcastToEndpointAsync(string endpoint, WebSocketMessage message)
     {
+        // Tag the outgoing message with this server's ID
         message.ClientId = _serverId;
 
         if (!_endpoints.TryGetValue(endpoint, out var connections) || !connections.Any())
@@ -301,8 +306,14 @@ public class WebSocketServer : IWebSocketServer, IDisposable
         var deadSockets = new List<WebSocket>();
         foreach (var (socket, _) in connections)
         {
+            // Acquire the semaphore for this socket to ensure only one SendAsync at a time
+            var sem = SocketLockMap.GetOrAdd(socket, _ => new SemaphoreSlim(1, 1));
+
             try
             {
+                // Lock the socket for sending
+                await sem.WaitAsync(_cancellationTokenSource.Token);
+
                 if (socket.State == WebSocketState.Open)
                 {
                     _logger.Info("Sending message to endpoint {Endpoint}: {Message}", endpoint, json);
@@ -323,8 +334,13 @@ public class WebSocketServer : IWebSocketServer, IDisposable
                 _logger.Error(ex, "Error broadcasting to client");
                 deadSockets.Add(socket);
             }
+            finally
+            {
+                sem.Release();
+            }
         }
 
+        // Cleanup sockets that are no longer valid
         foreach (var socket in deadSockets)
         {
             await RemoveConnectionAsync(socket, endpoint);

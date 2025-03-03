@@ -15,6 +15,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\CommonLib\CommonLib\CommonLib.csproj" />
+      <ProjectReference Include="..\SevenZipExtractor\SevenZipExtractor\SevenZipExtractor.csproj" />
     </ItemGroup>
 
 </Project>

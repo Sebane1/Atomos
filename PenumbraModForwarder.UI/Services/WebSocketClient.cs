@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Text;
@@ -19,10 +20,12 @@ namespace PenumbraModForwarder.UI.Services;
 public class WebSocketClient : IWebSocketClient, IDisposable
 {
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-
+    
     private readonly Dictionary<string, ClientWebSocket> _webSockets;
     private readonly INotificationService _notificationService;
     private readonly IConfigurationService _configurationService;
+    
+    private static readonly ConcurrentDictionary<ClientWebSocket, SemaphoreSlim> SocketLockMap = new();
 
     private readonly CancellationTokenSource _cts = new();
     private readonly string[] _endpoints = { "/status", "/currentTask", "/config", "/install", "/error" };
@@ -139,8 +142,14 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                 var json = JsonConvert.SerializeObject(message);
                 var bytes = Encoding.UTF8.GetBytes(json);
 
+                // Retrieve or create the semaphore for the specified webSocket.
+                var sem = SocketLockMap.GetOrAdd(webSocket, _ => new SemaphoreSlim(1, 1));
+
                 try
                 {
+                    // Wait on the semaphore to ensure only one SendAsync per socket at a time
+                    await sem.WaitAsync(_cts.Token);
+
                     await webSocket.SendAsync(
                         new ArraySegment<byte>(bytes),
                         WebSocketMessageType.Text,
@@ -153,6 +162,10 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                 catch (Exception ex)
                 {
                     _logger.Error(ex, "Error sending WebSocket message to {Endpoint}", endpoint);
+                }
+                finally
+                {
+                    sem.Release();
                 }
             }
             else
@@ -240,7 +253,7 @@ public class WebSocketClient : IWebSocketClient, IDisposable
                         case "/status":
                             await HandleStatusMessageAsync(message);
                             break;
-                        
+                            
                         case "/error":
                             await HandleErrorMessageAsync(message);
                             break;
@@ -326,7 +339,7 @@ public class WebSocketClient : IWebSocketClient, IDisposable
             );
         }
     }
-    
+        
     private async Task HandleErrorMessageAsync(WebSocketMessage message)
     {
         if (message is {Type: CustomWebSocketMessageType.Log, Status: WebSocketMessageStatus.Error})
