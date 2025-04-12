@@ -1,4 +1,5 @@
-﻿using LiteDB;
+﻿using System.Collections.Concurrent;
+using LiteDB;
 using NLog;
 using PenumbraModForwarder.Common.Enums;
 using PenumbraModForwarder.Common.Interfaces;
@@ -15,6 +16,10 @@ public class StatisticService : IStatisticService
     private readonly IFileStorage _fileStorage;
     private static readonly object _dbLock = new object();
 
+    // Queue for write operations
+    private readonly ConcurrentQueue<Action<LiteDatabase>> _dbActionQueue = new();
+    private readonly Timer _dbQueueTimer;
+
     public StatisticService(IFileStorage fileStorage, string? databasePath = null)
     {
         _fileStorage = fileStorage;
@@ -22,6 +27,9 @@ public class StatisticService : IStatisticService
                         ?? $@"{Common.Consts.ConfigurationConsts.ConfigurationPath}\userstats.db";
 
         EnsureDatabaseExists();
+
+        // Set up a background timer that fires every second to process queued write actions.
+        _dbQueueTimer = new Timer(ProcessDbQueue, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
     private TResult ExecuteDatabaseAction<TResult>(
@@ -44,27 +52,45 @@ public class StatisticService : IStatisticService
         }
     }
 
-    private void ExecuteDatabaseAction(
-        Action<LiteDatabase> action,
-        string errorContext)
+    /// <summary>
+    /// Enqueue a write operation to be processed later.
+    /// </summary>
+    private void EnqueueDatabaseAction(Action<LiteDatabase> action, string errorContext)
     {
-        try
+        _dbActionQueue.Enqueue(action);
+        _logger.Info("Queued database write action. Context: {0}", errorContext);
+    }
+
+    /// <summary>
+    /// Timer callback that processes queued database write operations.
+    /// </summary>
+    private void ProcessDbQueue(object? state)
+    {
+        while (_dbActionQueue.TryDequeue(out Action<LiteDatabase> action))
         {
-            lock (_dbLock)
+            try
             {
-                using var database = new LiteDatabase(_databasePath);
-                action(database);
+                lock (_dbLock)
+                {
+                    using var database = new LiteDatabase(_databasePath);
+                    action(database);
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, errorContext);
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to process queued DB write action. Re-queuing the action.");
+                // Optionally, requeue the action for a retry.
+                _dbActionQueue.Enqueue(action);
+                // Exit the loop to avoid busy spinning on failures.
+                break;
+            }
         }
     }
 
     public Task IncrementStatAsync(Stat stat)
     {
-        ExecuteDatabaseAction(db =>
+        // Queue the stat update operation
+        EnqueueDatabaseAction(db =>
             {
                 var stats = db.GetCollection<StatRecord>("stats");
                 var statRecord = stats.FindOne(x => x.Name == stat.ToString());
@@ -131,7 +157,8 @@ public class StatisticService : IStatisticService
 
     public async Task RecordModInstallationAsync(string modName)
     {
-        ExecuteDatabaseAction(db =>
+        // Queue the mod installation record
+        EnqueueDatabaseAction(db =>
             {
                 var modInstallations = db.GetCollection<ModInstallationRecord>("mod_installations");
                 var installationRecord = new ModInstallationRecord
