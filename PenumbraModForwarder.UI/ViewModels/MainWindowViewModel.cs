@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia;
+using Avalonia.Input;
 using Avalonia.Media;
 using CommonLib.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +14,8 @@ using PenumbraModForwarder.UI.Interfaces;
 using PenumbraModForwarder.UI.Models;
 using PenumbraModForwarder.UI.Services;
 using ReactiveUI;
+using Notification = PenumbraModForwarder.UI.Models.Notification;
+
 
 namespace PenumbraModForwarder.UI.ViewModels;
 
@@ -73,7 +77,7 @@ public class MainWindowViewModel : ViewModelBase
         _configurationListener = configurationListener;
         _soundManagerService = soundManagerService;
         _configurationService = configurationService;
-
+        
         // Check the configuration to see if Sentry is enabled at startup
         if ((bool)_configurationService.ReturnConfigValue(c => c.Common.EnableSentry))
         {
