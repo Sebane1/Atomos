@@ -23,8 +23,15 @@ public class StatisticService : IStatisticService
     public StatisticService(IFileStorage fileStorage, string? databasePath = null)
     {
         _fileStorage = fileStorage;
-        _databasePath = databasePath
-                        ?? $@"{CommonLib.Consts.ConfigurationConsts.DatabasePath}\userstats.db";
+#if DEBUG
+        // Use a static path for debug mode to ensure all projects use the same database
+        _databasePath = @"C:\Temp\SharedDebugDb\userstats.db";
+#else
+    // Use the provided path or default in Release mode
+    _databasePath = databasePath 
+        ?? $@"{CommonLib.Consts.ConfigurationConsts.DatabasePath}\userstats.db";
+#endif
+
 
         EnsureDatabaseExists();
 
