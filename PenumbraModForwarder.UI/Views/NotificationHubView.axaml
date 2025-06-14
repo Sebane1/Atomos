@@ -24,10 +24,10 @@
             </Border.Transitions>
         </Border>
         
-        <!-- Notification Button (Bottom Right) -->
+        <!-- Notification Button (Top Right) -->
         <Button HorizontalAlignment="Right" 
-                VerticalAlignment="Bottom" 
-                Margin="0,0,20,20"
+                VerticalAlignment="Top" 
+                Margin="0,20,20,0"
                 Width="50" 
                 Height="50"
                 Classes="notificationButton"
@@ -61,8 +61,8 @@
         <!-- Notification Flyout -->
         <Border IsVisible="{Binding IsNotificationFlyoutOpen}"
                 HorizontalAlignment="Right"
-                VerticalAlignment="Bottom"
-                Margin="0,0,20,80"
+                VerticalAlignment="Top"
+                Margin="0,80,20,0"
                 Width="350"
                 MaxHeight="500"
                 Background="#2D2D30"

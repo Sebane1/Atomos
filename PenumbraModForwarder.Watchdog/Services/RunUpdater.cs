@@ -75,27 +75,40 @@ public class RunUpdater : IRunUpdater
         {
             FileName = updaterExePath,
             Arguments = arguments,
-            UseShellExecute = false
+            UseShellExecute = true,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden
         };
 
         try
         {
-            Process.Start(processStartInfo);
-            _logger.Info("Updater process has been started.");
+            using (var process = Process.Start(processStartInfo))
+            {
+                if (process == null)
+                {
+                    _logger.Error("Failed to start updater process.");
+                    return false;
+                }
 
-            // Optional: Wait briefly for the new process to initialize
-            await Task.Delay(2000);
+                _logger.Info($"Updater process started with PID: {process.Id}");
+                
+                // Don't wait for the process or keep any references to it
+                // The updater should run independently
+            }
+
+            // Brief wait to allow process to initialise
+            await Task.Delay(1000);
 
             if (IsUpdaterRunning(updaterExePath))
             {
-                _logger.Info("Updater is confirmed running.");
+                _logger.Info("Updater is confirmed running and detached.");
+                return true;
             }
             else
             {
                 _logger.Warn("Updater is not detected in the process list.");
+                return false;
             }
-
-            return true;
         }
         catch (Exception ex)
         {
