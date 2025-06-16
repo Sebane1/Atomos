@@ -84,7 +84,7 @@ internal class Program
             {
                 _logger.Info("Update detected; launching updater.");
 
-                var currentExePath = assembly.Location;
+                var currentExePath = Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName ?? assembly.Location;
                 var installPath = Path.GetDirectoryName(currentExePath) 
                                   ?? AppContext.BaseDirectory;
                 var programToRunAfterInstallation = Path.GetFileName(currentExePath);
