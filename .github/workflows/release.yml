@@ -103,7 +103,7 @@ jobs:
               id: create-pr
               uses: peter-evans/create-pull-request@v5
               with:
-                  token: ${{ secrets.GITHUB_TOKEN }}
+                  token: ${{ steps.app-token.outputs.token }} 
                   commit-message: "chore: update version to ${{ steps.gitversion.outputs.fullsemver }} (isBeta=${{ github.event.inputs.isBeta }})"
                   title: "🤖 Version Update: ${{ steps.gitversion.outputs.fullsemver }}"
                   body: |
@@ -121,7 +121,7 @@ jobs:
               if: steps.create-pr.outputs.pull-request-number
               uses: peter-evans/enable-pull-request-automerge@v3
               with:
-                  token: ${{ secrets.GITHUB_TOKEN }}
+                  token: ${{ steps.app-token.outputs.token }}
                   pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
                   merge-method: squash
 
@@ -166,7 +166,7 @@ jobs:
                       }
                   } while ($true)
               env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GH_TOKEN: ${{ steps.app-token.outputs.token }}  # Use GitHub App token
 
             - name: Set Version Outputs
               id: version-output
