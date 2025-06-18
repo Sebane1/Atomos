@@ -129,7 +129,7 @@ jobs:
                   git commit -m "chore: update version to ${{ steps.gitversion.outputs.fullsemver }} (isBeta=${{ github.event.inputs.isBeta }})"
                   git push
               env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
 
             - name: Set Up .NET (v9)
               uses: actions/setup-dotnet@v4
