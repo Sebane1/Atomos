@@ -279,6 +279,33 @@ jobs:
                     Write-Host "✓ $($exe.Name) - $sizeKB KB"
                   }
 
+            - name: Create Release ZIP
+              shell: pwsh
+              run: |
+                  Set-Location "./publish"
+                  # Use "Windows" in the filename so the updater can find it
+                  $archSuffix = "${{ matrix.runtime }}".Replace("win-", "")
+                  Compress-Archive -Path "ModForwarder-${{ matrix.runtime }}" -DestinationPath "ModForwarder-Windows-$archSuffix.v${{ needs.version-update.outputs.version }}.zip"
+                  Set-Location ".."
+
+            - name: Upload Build Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ModForwarder-${{ matrix.runtime }}-v${{ needs.version-update.outputs.version }}
+                  path: ./publish/ModForwarder-Windows-*.v${{ needs.version-update.outputs.version }}.zip
+                  retention-days: 6
+
+    create-release:
+        needs: [version-update, build-and-release]
+        runs-on: windows-latest
+        steps:
+            - name: Checkout Code for Release Notes
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  submodules: recursive
+                  ref: main
+
             - name: Get Latest Release from GitHub
               id: get-release
               uses: actions/github-script@v7
@@ -304,33 +331,55 @@ jobs:
                     $commits = "No previous tag — first release."
                   } else {
                     try {
-                      $commits = git log "$ghLatestTagRaw..HEAD" --pretty=format:'- %s (%h)' | Where-Object { $_ -notmatch "chore: update version to" }
-                      $commits = $commits -join "`n"
+                      # Get commits since last release, excluding version update commits
+                      $gitOutput = git log "$ghLatestTagRaw..HEAD" --pretty=format:'- %s (%h)' 2>$null
+                      if ($gitOutput) {
+                        $commits = $gitOutput | Where-Object { 
+                          $_ -notmatch "chore: update version to" -and 
+                          $_ -notmatch "🤖 Version Update:" -and
+                          $_ -notmatch "Merge pull request.*version-update"
+                        }
+                        if ($commits) {
+                          $commits = $commits -join "`n"
+                        } else {
+                          $commits = "- Minor improvements and bug fixes"
+                        }
+                      } else {
+                        $commits = "- Minor improvements and bug fixes"
+                      }
                     } catch {
-                      $commits = "Unable to generate commit history."
+                      Write-Host "Error generating commit history: $($_.Exception.Message)"
+                      $commits = "- Minor improvements and bug fixes"
                     }
                   }
                   
+                  # Set environment variable for release body
                   echo "COMMITS<<EOF" >> $env:GITHUB_ENV
                   echo $commits >> $env:GITHUB_ENV
                   echo "EOF" >> $env:GITHUB_ENV
+                  
+                  Write-Host "Generated release notes:"
+                  Write-Host $commits
 
-            - name: Create Release ZIP
+            - name: Download All Artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  path: ./artifacts
+
+            - name: Move artifacts to publish folder
               shell: pwsh
               run: |
-                  Set-Location "./publish"
-                  Compress-Archive -Path "ModForwarder-${{ matrix.runtime }}" -DestinationPath "ModForwarder-${{ matrix.runtime }}.v${{ needs.version-update.outputs.version }}.zip"
-                  Set-Location ".."
+                  New-Item -ItemType Directory -Path "./publish" -Force
+                  Get-ChildItem -Path "./artifacts" -Recurse -Filter "*.zip" | ForEach-Object {
+                      Copy-Item -Path $_.FullName -Destination "./publish/" -Force
+                      Write-Host "Found artifact: $($_.Name)"
+                  }
+                  
+                  # List all files for verification
+                  Write-Host "Files in publish directory:"
+                  Get-ChildItem -Path "./publish" | ForEach-Object { Write-Host "  $($_.Name)" }
 
-            - name: Upload Build Artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                  name: ModForwarder-${{ matrix.runtime }}-v${{ needs.version-update.outputs.version }}
-                  path: ./publish/ModForwarder-${{ matrix.runtime }}.v${{ needs.version-update.outputs.version }}.zip
-                  retention-days: 6
-
-            - name: Create GitHub Release (only for win-x64)
-              if: matrix.runtime == 'win-x64'
+            - name: Create GitHub Release
               uses: softprops/action-gh-release@v1
               with:
                   tag_name: v${{ needs.version-update.outputs.version }}
@@ -340,13 +389,13 @@ jobs:
                       ${{ env.COMMITS }}
                       
                       ## Available Downloads:
-                      - `ModForwarder-win-x64.v${{ needs.version-update.outputs.version }}.zip` - Windows 64-bit
-                      - `ModForwarder-win-x86.v${{ needs.version-update.outputs.version }}.zip` - Windows 32-bit  
-                      - `ModForwarder-win-arm64.v${{ needs.version-update.outputs.version }}.zip` - Windows ARM64
+                      - `ModForwarder-Windows-x64.v${{ needs.version-update.outputs.version }}.zip` - Windows 64-bit
+                      - `ModForwarder-Windows-x86.v${{ needs.version-update.outputs.version }}.zip` - Windows 32-bit  
+                      - `ModForwarder-Windows-arm64.v${{ needs.version-update.outputs.version }}.zip` - Windows ARM64
                   files: |
-                      ./publish/ModForwarder-win-x64.v${{ needs.version-update.outputs.version }}.zip
-                      ./publish/ModForwarder-win-x86.v${{ needs.version-update.outputs.version }}.zip
-                      ./publish/ModForwarder-win-arm64.v${{ needs.version-update.outputs.version }}.zip
+                      ./publish/ModForwarder-Windows-x64.v${{ needs.version-update.outputs.version }}.zip
+                      ./publish/ModForwarder-Windows-x86.v${{ needs.version-update.outputs.version }}.zip
+                      ./publish/ModForwarder-Windows-arm64.v${{ needs.version-update.outputs.version }}.zip
                   draft: false
                   prerelease: ${{ github.event.inputs.isBeta == 'true' }}
               env:
@@ -356,14 +405,5 @@ jobs:
               if: success()
               shell: pwsh
               run: |
-                  Write-Host "✅ Release v${{ needs.version-update.outputs.version }} created successfully for ${{ matrix.runtime }}!"
-                  if ("${{ matrix.runtime }}" -eq "win-x64") {
-                    Write-Host "📦 Download: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.version-update.outputs.version }}"
-                  }
-
-            - name: Notify on Failure
-              if: failure()
-              shell: pwsh
-              run: |
-                  Write-Host "❌ Build failed for ${{ matrix.runtime }}."
-              continue-on-error: true
+                  Write-Host "✅ Release v${{ needs.version-update.outputs.version }} created successfully with all platforms!"
+                  Write-Host "📦 Download: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.version-update.outputs.version }}"
