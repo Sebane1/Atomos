@@ -1,6 +1,3 @@
 [submodule "CommonLib"]
 	path = CommonLib
 	url = https://github.com/CouncilOfTsukuyomi/PMF.CommonLib.git
-[submodule "SevenZipExtractor"]
-	path = SevenZipExtractor
-	url = https://github.com/CollapseLauncher/SevenZipExtractor.git
