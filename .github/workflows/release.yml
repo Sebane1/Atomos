@@ -28,13 +28,13 @@ permissions:
     security-events: write
 
 jobs:
-    version-update-and-build:
+    version-update:
         runs-on: windows-latest
-        env:
-            SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-        strategy:
-            matrix:
-                runtime: [win-x64, win-x86, win-arm64]
+        outputs:
+            version: ${{ steps.version-output.outputs.version }}
+            major: ${{ steps.version-output.outputs.major }}
+            minor: ${{ steps.version-output.outputs.minor }}
+            patch: ${{ steps.version-output.outputs.patch }}
         steps:
             - uses: actions/create-github-app-token@v1
               id: app-token
@@ -53,14 +53,6 @@ jobs:
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-            - name: Cache NuGet packages
-              uses: actions/cache@v4
-              with:
-                  path: ~/.nuget/packages
-                  key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
-                  restore-keys: |
-                      ${{ runner.os }}-nuget-
 
             - name: Setup Dependencies
               shell: pwsh
@@ -87,14 +79,6 @@ jobs:
               env:
                   RELEASE_TYPE: ${{ github.event.inputs.releaseType }}
 
-            - name: Debug GitVersion Output
-              shell: pwsh
-              run: |
-                  Write-Host "FullSemVer: ${{ steps.gitversion.outputs.fullsemver }}"
-                  Write-Host "Major: ${{ steps.gitversion.outputs.major }}"
-                  Write-Host "Minor: ${{ steps.gitversion.outputs.minor }}"
-                  Write-Host "Patch: ${{ steps.gitversion.outputs.patch }}"
-
             - name: Update Directory.Build.props Versions
               shell: pwsh
               run: |
@@ -119,7 +103,7 @@ jobs:
               id: create-pr
               uses: peter-evans/create-pull-request@v5
               with:
-                  token: ${{ steps.app-token.outputs.token }}
+                  token: ${{ secrets.GITHUB_TOKEN }}
                   commit-message: "chore: update version to ${{ steps.gitversion.outputs.fullsemver }} (isBeta=${{ github.event.inputs.isBeta }})"
                   title: "🤖 Version Update: ${{ steps.gitversion.outputs.fullsemver }}"
                   body: |
@@ -128,17 +112,16 @@ jobs:
                       - **Version**: ${{ steps.gitversion.outputs.fullsemver }}
                       - **Beta**: ${{ github.event.inputs.isBeta }}
                       - **Release Type**: ${{ github.event.inputs.releaseType }}
-                      - **Runtime**: ${{ matrix.runtime }}
                       
                       This PR was automatically created by the release workflow.
-                  branch: version-update-${{ steps.gitversion.outputs.fullsemver }}-${{ matrix.runtime }}
+                  branch: version-update-${{ steps.gitversion.outputs.fullsemver }}
                   delete-branch: true
 
             - name: Auto-merge Version Update PR
               if: steps.create-pr.outputs.pull-request-number
               uses: peter-evans/enable-pull-request-automerge@v3
               with:
-                  token: ${{ steps.app-token.outputs.token }}
+                  token: ${{ secrets.GITHUB_TOKEN }}
                   pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
                   merge-method: squash
 
@@ -183,14 +166,40 @@ jobs:
                       }
                   } while ($true)
               env:
-                  GH_TOKEN: ${{ steps.app-token.outputs.token }}
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Checkout Updated Main Branch
-              if: steps.create-pr.outputs.pull-request-number
+            - name: Set Version Outputs
+              id: version-output
+              shell: pwsh
               run: |
-                  git fetch origin main
-                  git checkout main
-                  git reset --hard origin/main
+                  echo "version=${{ steps.gitversion.outputs.fullsemver }}" >> $env:GITHUB_OUTPUT
+                  echo "major=${{ steps.gitversion.outputs.major }}" >> $env:GITHUB_OUTPUT
+                  echo "minor=${{ steps.gitversion.outputs.minor }}" >> $env:GITHUB_OUTPUT
+                  echo "patch=${{ steps.gitversion.outputs.patch }}" >> $env:GITHUB_OUTPUT
+
+    build-and-release:
+        needs: version-update
+        runs-on: windows-latest
+        env:
+            SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        strategy:
+            matrix:
+                runtime: [win-x64, win-x86, win-arm64]
+        steps:
+            - name: Checkout Updated Code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  submodules: recursive
+                  ref: main  # Make sure we get the updated main branch
+
+            - name: Cache NuGet packages
+              uses: actions/cache@v4
+              with:
+                  path: ~/.nuget/packages
+                  key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
+                  restore-keys: |
+                      ${{ runner.os }}-nuget-
 
             - name: Set Up .NET (v9)
               uses: actions/setup-dotnet@v4
@@ -270,29 +279,6 @@ jobs:
                     Write-Host "✓ $($exe.Name) - $sizeKB KB"
                   }
 
-            - name: Run GitVersion again
-              id: gitversion2
-              shell: pwsh
-              run: |
-                  # Read version from Directory.Build.props using XML
-                  [xml]$buildProps = Get-Content "Directory.Build.props"
-                  $major = $buildProps.Project.PropertyGroup.MajorVersion
-                  $minor = $buildProps.Project.PropertyGroup.MinorVersion
-                  $patch = $buildProps.Project.PropertyGroup.PatchVersion
-                  
-                  $fullSemVer = "$major.$minor.$patch"
-                  $previousTag = ""
-                  
-                  try {
-                    $previousTag = git describe --tags --abbrev=0 2>$null
-                  } catch {
-                    Write-Host "No previous tag found"
-                  }
-                  
-                  echo "FULL_SEMVER=$fullSemVer" >> $env:GITHUB_ENV
-                  echo "MAJORMINORPATCH=$fullSemVer" >> $env:GITHUB_ENV
-                  echo "PREVIOUS_TAG=$previousTag" >> $env:GITHUB_ENV
-
             - name: Get Latest Release from GitHub
               id: get-release
               uses: actions/github-script@v7
@@ -308,66 +294,23 @@ jobs:
                         core.setOutput("latest_tag", releases[0].tag_name);
                       }
 
-            - name: Compare GitHub Tag with GitVersion (SemVer)
-              shell: pwsh
-              run: |
-                  $ghLatestTagRaw = "${{ steps.get-release.outputs.latest_tag }}"
-                  $fullSemVer = "${{ env.FULL_SEMVER }}"
-                  
-                  if ([string]::IsNullOrEmpty($ghLatestTagRaw)) {
-                    Write-Host "No previous GitHub release found. We'll do a brand-new release."
-                    exit 0
-                  }
-                  
-                  $ghLatestTag = $ghLatestTagRaw -replace '^v', ''
-                  $cleanSemVer = $fullSemVer -replace '-.*$', ''
-                  
-                  $ghParts = $ghLatestTag.Split('.')
-                  $gitParts = $cleanSemVer.Split('.')
-                  
-                  $ghMajor = [int]$ghParts[0]
-                  $ghMinor = [int]$ghParts[1]
-                  $ghPatch = [int]$ghParts[2]
-                  $gitMajor = [int]$gitParts[0]
-                  $gitMinor = [int]$gitParts[1]
-                  $gitPatch = [int]$gitParts[2]
-                  
-                  Write-Host "GitHub's release version: $ghMajor.$ghMinor.$ghPatch"
-                  Write-Host "Local version:           $gitMajor.$gitMinor.$gitPatch"
-                  
-                  if (($gitMajor -gt $ghMajor) -or 
-                      (($gitMajor -eq $ghMajor) -and ($gitMinor -gt $ghMinor)) -or
-                      (($gitMajor -eq $ghMajor) -and ($gitMinor -eq $ghMinor) -and ($gitPatch -gt $ghPatch))) {
-                    Write-Host "Newer version found locally; proceed with release."
-                  } else {
-                    Write-Host "Local version is NOT newer. You might decide to skip or handle differently."
-                  }
-
             - name: Generate Release Notes
               id: gen-notes
               shell: pwsh
               run: |
-                  $gitVersionPreviousTag = "${{ env.PREVIOUS_TAG }}"
                   $ghLatestTagRaw = "${{ steps.get-release.outputs.latest_tag }}"
-                  $fallbackTag = $ghLatestTagRaw
                   
-                  if ([string]::IsNullOrEmpty($gitVersionPreviousTag) -and (-not [string]::IsNullOrEmpty($ghLatestTagRaw))) {
-                    Write-Host "No local previous tag found; falling back to GitHub release tag '$fallbackTag'."
-                    $gitVersionPreviousTag = $fallbackTag
-                  }
-                  
-                  if ([string]::IsNullOrEmpty($gitVersionPreviousTag)) {
-                    $commits = "No previous tag — skipping commit history."
+                  if ([string]::IsNullOrEmpty($ghLatestTagRaw)) {
+                    $commits = "No previous tag — first release."
                   } else {
                     try {
-                      $commits = git log "$gitVersionPreviousTag..HEAD" --pretty=format:'- %s (%h)' | Where-Object { $_ -notmatch "chore: update version to" }
+                      $commits = git log "$ghLatestTagRaw..HEAD" --pretty=format:'- %s (%h)' | Where-Object { $_ -notmatch "chore: update version to" }
                       $commits = $commits -join "`n"
                     } catch {
                       $commits = "Unable to generate commit history."
                     }
                   }
                   
-                  $commits | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
                   echo "COMMITS<<EOF" >> $env:GITHUB_ENV
                   echo $commits >> $env:GITHUB_ENV
                   echo "EOF" >> $env:GITHUB_ENV
@@ -376,34 +319,34 @@ jobs:
               shell: pwsh
               run: |
                   Set-Location "./publish"
-                  Compress-Archive -Path "ModForwarder-${{ matrix.runtime }}" -DestinationPath "ModForwarder-${{ matrix.runtime }}.v${{ env.MAJORMINORPATCH }}.zip"
+                  Compress-Archive -Path "ModForwarder-${{ matrix.runtime }}" -DestinationPath "ModForwarder-${{ matrix.runtime }}.v${{ needs.version-update.outputs.version }}.zip"
                   Set-Location ".."
 
             - name: Upload Build Artifacts
               uses: actions/upload-artifact@v4
               with:
-                  name: ModForwarder-${{ matrix.runtime }}-v${{ env.MAJORMINORPATCH }}
-                  path: ./publish/ModForwarder-${{ matrix.runtime }}.v${{ env.MAJORMINORPATCH }}.zip
+                  name: ModForwarder-${{ matrix.runtime }}-v${{ needs.version-update.outputs.version }}
+                  path: ./publish/ModForwarder-${{ matrix.runtime }}.v${{ needs.version-update.outputs.version }}.zip
                   retention-days: 6
 
             - name: Create GitHub Release (only for win-x64)
               if: matrix.runtime == 'win-x64'
               uses: softprops/action-gh-release@v1
               with:
-                  tag_name: v${{ env.MAJORMINORPATCH }}
-                  name: Release v${{ env.MAJORMINORPATCH }}
+                  tag_name: v${{ needs.version-update.outputs.version }}
+                  name: Release v${{ needs.version-update.outputs.version }}
                   body: |
                       ## Changes (since last release):
                       ${{ env.COMMITS }}
                       
                       ## Available Downloads:
-                      - `ModForwarder-win-x64.v${{ env.MAJORMINORPATCH }}.zip` - Windows 64-bit
-                      - `ModForwarder-win-x86.v${{ env.MAJORMINORPATCH }}.zip` - Windows 32-bit  
-                      - `ModForwarder-win-arm64.v${{ env.MAJORMINORPATCH }}.zip` - Windows ARM64
+                      - `ModForwarder-win-x64.v${{ needs.version-update.outputs.version }}.zip` - Windows 64-bit
+                      - `ModForwarder-win-x86.v${{ needs.version-update.outputs.version }}.zip` - Windows 32-bit  
+                      - `ModForwarder-win-arm64.v${{ needs.version-update.outputs.version }}.zip` - Windows ARM64
                   files: |
-                      ./publish/ModForwarder-win-x64.v${{ env.MAJORMINORPATCH }}.zip
-                      ./publish/ModForwarder-win-x86.v${{ env.MAJORMINORPATCH }}.zip
-                      ./publish/ModForwarder-win-arm64.v${{ env.MAJORMINORPATCH }}.zip
+                      ./publish/ModForwarder-win-x64.v${{ needs.version-update.outputs.version }}.zip
+                      ./publish/ModForwarder-win-x86.v${{ needs.version-update.outputs.version }}.zip
+                      ./publish/ModForwarder-win-arm64.v${{ needs.version-update.outputs.version }}.zip
                   draft: false
                   prerelease: ${{ github.event.inputs.isBeta == 'true' }}
               env:
@@ -413,15 +356,14 @@ jobs:
               if: success()
               shell: pwsh
               run: |
-                  Write-Host "✅ Release v${{ env.MAJORMINORPATCH }} created successfully for ${{ matrix.runtime }}!"
+                  Write-Host "✅ Release v${{ needs.version-update.outputs.version }} created successfully for ${{ matrix.runtime }}!"
                   if ("${{ matrix.runtime }}" -eq "win-x64") {
-                    Write-Host "📦 Download: https://github.com/${{ github.repository }}/releases/tag/v${{ env.MAJORMINORPATCH }}"
+                    Write-Host "📦 Download: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.version-update.outputs.version }}"
                   }
 
-            - name: Rollback on Failure
+            - name: Notify on Failure
               if: failure()
               shell: pwsh
               run: |
-                  Write-Host "❌ Build failed for ${{ matrix.runtime }}. Version update was handled via PR."
-                  Write-Host "Check the PR and workflow logs for details."
+                  Write-Host "❌ Build failed for ${{ matrix.runtime }}."
               continue-on-error: true
