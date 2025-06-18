@@ -30,6 +30,8 @@ permissions:
 jobs:
     version-update-and-build:
         runs-on: windows-latest
+        env:
+            SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         strategy:
             matrix:
                 runtime: [win-x64, win-x86, win-arm64]
@@ -76,16 +78,6 @@ jobs:
                     Write-Host "Warning: Python script not found"
                   }
 
-            # Environment-specific configurations
-            # - name: Set Build Environment
-            #   shell: pwsh
-            #   run: |
-            #     if ("${{ github.event.inputs.isBeta }}" -eq "true") {
-            #       echo "BUILD_CONFIG=Beta" >> $env:GITHUB_ENV
-            #     } else {
-            #       echo "BUILD_CONFIG=Release" >> $env:GITHUB_ENV
-            #     }
-
             - name: Determine Version with GitVersion
               id: gitversion
               shell: pwsh
@@ -123,13 +115,82 @@ jobs:
                   $content = $content -replace '<IsBeta>.*</IsBeta>', "<IsBeta>${{ github.event.inputs.isBeta }}</IsBeta>"
                   Set-Content "Directory.Build.props" -Value $content
 
-            - name: Commit Updated Directory.Build.props
+            - name: Create Pull Request for Version Update
+              id: create-pr
+              uses: peter-evans/create-pull-request@v5
+              with:
+                  token: ${{ steps.app-token.outputs.token }}
+                  commit-message: "chore: update version to ${{ steps.gitversion.outputs.fullsemver }} (isBeta=${{ github.event.inputs.isBeta }})"
+                  title: "🤖 Version Update: ${{ steps.gitversion.outputs.fullsemver }}"
+                  body: |
+                      Automated version update for release ${{ steps.gitversion.outputs.fullsemver }}
+                      
+                      - **Version**: ${{ steps.gitversion.outputs.fullsemver }}
+                      - **Beta**: ${{ github.event.inputs.isBeta }}
+                      - **Release Type**: ${{ github.event.inputs.releaseType }}
+                      - **Runtime**: ${{ matrix.runtime }}
+                      
+                      This PR was automatically created by the release workflow.
+                  branch: version-update-${{ steps.gitversion.outputs.fullsemver }}-${{ matrix.runtime }}
+                  delete-branch: true
+
+            - name: Auto-merge Version Update PR
+              if: steps.create-pr.outputs.pull-request-number
+              uses: peter-evans/enable-pull-request-automerge@v3
+              with:
+                  token: ${{ steps.app-token.outputs.token }}
+                  pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
+                  merge-method: squash
+
+            - name: Wait for PR to be merged
+              if: steps.create-pr.outputs.pull-request-number
+              shell: pwsh
               run: |
-                  git add Directory.Build.props
-                  git commit -m "chore: update version to ${{ steps.gitversion.outputs.fullsemver }} (isBeta=${{ github.event.inputs.isBeta }})"
-                  git push
+                  $prNumber = "${{ steps.create-pr.outputs.pull-request-number }}"
+                  $maxAttempts = 30
+                  $attempt = 0
+                  
+                  Write-Host "⏳ Waiting for PR #$prNumber to be merged..."
+                  
+                  do {
+                      Start-Sleep -Seconds 10
+                      $attempt++
+                  
+                      try {
+                          $prInfo = gh pr view $prNumber --json state,mergeable,mergeStateStatus --repo ${{ github.repository }}
+                          $prData = $prInfo | ConvertFrom-Json
+                  
+                          Write-Host "Attempt $attempt/$maxAttempts - PR State: $($prData.state), Mergeable: $($prData.mergeable), Merge Status: $($prData.mergeStateStatus)"
+                  
+                          if ($prData.state -eq "MERGED") {
+                              Write-Host "✅ PR merged successfully!"
+                              break
+                          } elseif ($prData.state -eq "CLOSED") {
+                              Write-Error "❌ PR was closed without merging"
+                              exit 1
+                          }
+                  
+                          if ($attempt -ge $maxAttempts) {
+                              Write-Error "❌ PR was not merged within expected time (5 minutes)"
+                              exit 1
+                          }
+                      } catch {
+                          Write-Host "Error checking PR status: $($_.Exception.Message)"
+                          if ($attempt -ge $maxAttempts) {
+                              Write-Error "❌ Failed to check PR status after $maxAttempts attempts"
+                              exit 1
+                          }
+                      }
+                  } while ($true)
               env:
-                  GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+                  GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+            - name: Checkout Updated Main Branch
+              if: steps.create-pr.outputs.pull-request-number
+              run: |
+                  git fetch origin main
+                  git checkout main
+                  git reset --hard origin/main
 
             - name: Set Up .NET (v9)
               uses: actions/setup-dotnet@v4
@@ -146,17 +207,8 @@ jobs:
               run: dotnet test --configuration Release --no-build --verbosity normal
               continue-on-error: true
 
-            # Security scanning
-            # - name: Run Security Scan
-            #   uses: securecodewarrior/github-action-add-sarif@v1
-            #   with:
-            #     sarif-file: 'security-scan-results.sarif'
-            #   continue-on-error: true
-
             - name: Publish Solution Components
               shell: pwsh
-              env:
-                  SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
               run: |
                   # Create main publish directory
                   New-Item -ItemType Directory -Path "./publish/ModForwarder-${{ matrix.runtime }}" -Force
@@ -332,7 +384,7 @@ jobs:
               with:
                   name: ModForwarder-${{ matrix.runtime }}-v${{ env.MAJORMINORPATCH }}
                   path: ./publish/ModForwarder-${{ matrix.runtime }}.v${{ env.MAJORMINORPATCH }}.zip
-                  retention-days: 90
+                  retention-days: 6
 
             - name: Create GitHub Release (only for win-x64)
               if: matrix.runtime == 'win-x64'
@@ -370,7 +422,6 @@ jobs:
               if: failure()
               shell: pwsh
               run: |
-                  Write-Host "❌ Build failed for ${{ matrix.runtime }}, rolling back version commit..."
-                  git reset --hard HEAD~1
-                  git push --force-with-lease
+                  Write-Host "❌ Build failed for ${{ matrix.runtime }}. Version update was handled via PR."
+                  Write-Host "Check the PR and workflow logs for details."
               continue-on-error: true
