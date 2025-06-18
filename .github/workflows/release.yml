@@ -210,8 +210,8 @@ jobs:
               run: dotnet restore
 
             - name: Build Solution
-              run: dotnet build --configuration Release --parallel
-
+              run: dotnet build --configuration Release --verbosity minimal
+            
             - name: Run Tests
               run: dotnet test --configuration Release --no-build --verbosity normal
               continue-on-error: true
