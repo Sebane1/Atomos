@@ -60,50 +60,68 @@ jobs:
                   restore-keys: |
                       ${{ runner.os }}-nuget-
 
-            - name: Setup GitVersion
+            - name: Setup Dependencies
+              shell: pwsh
               run: |
-                  sudo apt-get update -y
-                  sudo apt-get install -y python3
-                  sudo apt-get install -y xmlstarlet
-                  chmod +x .github/scripts/increment_version.py
+                  # Install Python if not available
+                  if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+                    choco install python -y
+                    refreshenv
+                  }
+                  
+                  # Make script executable (Git Bash style)
+                  if (Test-Path ".github/scripts/increment_version.py") {
+                    Write-Host "Python script found"
+                  } else {
+                    Write-Host "Warning: Python script not found"
+                  }
 
             # Environment-specific configurations
             # - name: Set Build Environment
+            #   shell: pwsh
             #   run: |
-            #     if [ "${{ github.event.inputs.isBeta }}" == "true" ]; then
-            #       echo "BUILD_CONFIG=Beta" >> $GITHUB_ENV
-            #     else
-            #       echo "BUILD_CONFIG=Release" >> $GITHUB_ENV
-            #     fi
+            #     if ("${{ github.event.inputs.isBeta }}" -eq "true") {
+            #       echo "BUILD_CONFIG=Beta" >> $env:GITHUB_ENV
+            #     } else {
+            #       echo "BUILD_CONFIG=Release" >> $env:GITHUB_ENV
+            #     }
 
             - name: Determine Version with GitVersion
               id: gitversion
+              shell: pwsh
               run: |
-                  RELEASE_TYPE="${{ github.event.inputs.releaseType }}" \
-                    .github/scripts/increment_version.py
+                  $env:RELEASE_TYPE = "${{ github.event.inputs.releaseType }}"
+                  python .github/scripts/increment_version.py
               env:
                   RELEASE_TYPE: ${{ github.event.inputs.releaseType }}
 
             - name: Debug GitVersion Output
+              shell: pwsh
               run: |
-                  echo "FullSemVer: ${{ steps.gitversion.outputs.fullsemver }}"
-                  echo "Major: ${{ steps.gitversion.outputs.major }}"
-                  echo "Minor: ${{ steps.gitversion.outputs.minor }}"
-                  echo "Patch: ${{ steps.gitversion.outputs.patch }}"
+                  Write-Host "FullSemVer: ${{ steps.gitversion.outputs.fullsemver }}"
+                  Write-Host "Major: ${{ steps.gitversion.outputs.major }}"
+                  Write-Host "Minor: ${{ steps.gitversion.outputs.minor }}"
+                  Write-Host "Patch: ${{ steps.gitversion.outputs.patch }}"
 
             - name: Update Directory.Build.props Versions
+              shell: pwsh
               run: |
-                  MAJOR="${{ steps.gitversion.outputs.major }}"
-                  MINOR="${{ steps.gitversion.outputs.minor }}"
-                  PATCH="${{ steps.gitversion.outputs.patch }}"
+                  $major = "${{ steps.gitversion.outputs.major }}"
+                  $minor = "${{ steps.gitversion.outputs.minor }}"
+                  $patch = "${{ steps.gitversion.outputs.patch }}"
                   
-                  sed -i "s|<MajorVersion>.*</MajorVersion>|<MajorVersion>${MAJOR}</MajorVersion>|" Directory.Build.props
-                  sed -i "s|<MinorVersion>.*</MinorVersion>|<MinorVersion>${MINOR}</MinorVersion>|" Directory.Build.props
-                  sed -i "s|<PatchVersion>.*</PatchVersion>|<PatchVersion>${PATCH}</PatchVersion>|" Directory.Build.props
+                  $content = Get-Content "Directory.Build.props" -Raw
+                  $content = $content -replace '<MajorVersion>.*</MajorVersion>', "<MajorVersion>$major</MajorVersion>"
+                  $content = $content -replace '<MinorVersion>.*</MinorVersion>', "<MinorVersion>$minor</MinorVersion>"
+                  $content = $content -replace '<PatchVersion>.*</PatchVersion>', "<PatchVersion>$patch</PatchVersion>"
+                  Set-Content "Directory.Build.props" -Value $content
 
             - name: Handle Beta Builds
+              shell: pwsh
               run: |
-                  sed -i "s|<IsBeta>.*</IsBeta>|<IsBeta>${{ github.event.inputs.isBeta }}</IsBeta>|" Directory.Build.props
+                  $content = Get-Content "Directory.Build.props" -Raw
+                  $content = $content -replace '<IsBeta>.*</IsBeta>', "<IsBeta>${{ github.event.inputs.isBeta }}</IsBeta>"
+                  Set-Content "Directory.Build.props" -Value $content
 
             - name: Commit Updated Directory.Build.props
               run: |
@@ -136,76 +154,92 @@ jobs:
             #   continue-on-error: true
 
             - name: Publish Solution Components
+              shell: pwsh
+              env:
+                  SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
               run: |
                   # Create main publish directory
-                  mkdir -p ./publish/ModForwarder-${{ matrix.runtime }}
+                  New-Item -ItemType Directory -Path "./publish/ModForwarder-${{ matrix.runtime }}" -Force
                   
                   # Publish Console Tooling with optimizations
-                  dotnet publish PenumbraModForwarder.ConsoleTooling \
-                    -c Release \
-                    -p:PublishSingleFile=true \
-                    -p:PublishReadyToRun=true \
-                    --self-contained=true \
-                    -p:DebugType=None -p:DebugSymbols=false \
-                    -r ${{ matrix.runtime }} \
-                    -o ./publish/temp-console-${{ matrix.runtime }} \
+                  dotnet publish PenumbraModForwarder.ConsoleTooling `
+                    -c Release `
+                    -p:PublishSingleFile=true `
+                    -p:PublishReadyToRun=true `
+                    --self-contained=true `
+                    -p:DebugType=None -p:DebugSymbols=false `
+                    -r ${{ matrix.runtime }} `
+                    -o "./publish/temp-console-${{ matrix.runtime }}" `
                     -f net9.0
                   
                   # Publish UI Application with optimizations
-                  dotnet publish PenumbraModForwarder.UI \
-                    -c Release \
-                    -p:PublishSingleFile=true \
-                    -p:PublishReadyToRun=true \
-                    --self-contained=true \
-                    -p:DebugType=None -p:DebugSymbols=false \
-                    -r ${{ matrix.runtime }} \
-                    -o ./publish/temp-ui-${{ matrix.runtime }} \
+                  dotnet publish PenumbraModForwarder.UI `
+                    -c Release `
+                    -p:PublishSingleFile=true `
+                    -p:PublishReadyToRun=true `
+                    --self-contained=true `
+                    -p:DebugType=None -p:DebugSymbols=false `
+                    -r ${{ matrix.runtime }} `
+                    -o "./publish/temp-ui-${{ matrix.runtime }}" `
                     -f net9.0
                   
                   # Publish Background Worker with optimizations
-                  dotnet publish PenumbraModForwarder.BackgroundWorker \
-                    -c Release \
-                    -p:PublishSingleFile=true \
-                    -p:PublishReadyToRun=true \
-                    --self-contained=true \
-                    -p:DebugType=None -p:DebugSymbols=false \
-                    -r ${{ matrix.runtime }} \
-                    -o ./publish/temp-worker-${{ matrix.runtime }} \
+                  dotnet publish PenumbraModForwarder.BackgroundWorker `
+                    -c Release `
+                    -p:PublishSingleFile=true `
+                    -p:PublishReadyToRun=true `
+                    --self-contained=true `
+                    -p:DebugType=None -p:DebugSymbols=false `
+                    -r ${{ matrix.runtime }} `
+                    -o "./publish/temp-worker-${{ matrix.runtime }}" `
                     -f net9.0
                   
                   # Move all files to the root ModForwarder directory
-                  cp -r ./publish/temp-console-${{ matrix.runtime }}/* ./publish/ModForwarder-${{ matrix.runtime }}/
-                  cp -r ./publish/temp-ui-${{ matrix.runtime }}/* ./publish/ModForwarder-${{ matrix.runtime }}/
-                  cp -r ./publish/temp-worker-${{ matrix.runtime }}/* ./publish/ModForwarder-${{ matrix.runtime }}/
+                  Copy-Item -Path "./publish/temp-console-${{ matrix.runtime }}/*" -Destination "./publish/ModForwarder-${{ matrix.runtime }}/" -Recurse -Force
+                  Copy-Item -Path "./publish/temp-ui-${{ matrix.runtime }}/*" -Destination "./publish/ModForwarder-${{ matrix.runtime }}/" -Recurse -Force
+                  Copy-Item -Path "./publish/temp-worker-${{ matrix.runtime }}/*" -Destination "./publish/ModForwarder-${{ matrix.runtime }}/" -Recurse -Force
                   
                   # Clean up temporary directories
-                  rm -rf ./publish/temp-console-${{ matrix.runtime }} ./publish/temp-ui-${{ matrix.runtime }} ./publish/temp-worker-${{ matrix.runtime }}
+                  Remove-Item -Path "./publish/temp-console-${{ matrix.runtime }}" -Recurse -Force
+                  Remove-Item -Path "./publish/temp-ui-${{ matrix.runtime }}" -Recurse -Force
+                  Remove-Item -Path "./publish/temp-worker-${{ matrix.runtime }}" -Recurse -Force
 
             - name: Validate Executables
+              shell: pwsh
               run: |
                   # Verify executables were created and are not zero-byte
-                  for exe in ./publish/ModForwarder-${{ matrix.runtime }}/*.exe; do
-                    if [ ! -s "$exe" ]; then
-                      echo "Error: $exe is empty or missing"
+                  $exeFiles = Get-ChildItem -Path "./publish/ModForwarder-${{ matrix.runtime }}/" -Filter "*.exe"
+                  foreach ($exe in $exeFiles) {
+                    if ($exe.Length -eq 0) {
+                      Write-Error "Error: $($exe.Name) is empty"
                       exit 1
-                    fi
-                    echo "✓ $(basename "$exe") - $(du -h "$exe" | cut -f1)"
-                  done
+                    }
+                    $sizeKB = [math]::Round($exe.Length / 1KB, 2)
+                    Write-Host "✓ $($exe.Name) - $sizeKB KB"
+                  }
 
             - name: Run GitVersion again
               id: gitversion2
-              shell: bash
+              shell: pwsh
               run: |
-                  CURRENT_MAJOR=$(xmlstarlet sel -t -v "//Project/PropertyGroup/MajorVersion" Directory.Build.props)
-                  CURRENT_MINOR=$(xmlstarlet sel -t -v "//Project/PropertyGroup/MinorVersion" Directory.Build.props)
-                  CURRENT_PATCH=$(xmlstarlet sel -t -v "//Project/PropertyGroup/PatchVersion" Directory.Build.props)
+                  # Read version from Directory.Build.props using XML
+                  [xml]$buildProps = Get-Content "Directory.Build.props"
+                  $major = $buildProps.Project.PropertyGroup.MajorVersion
+                  $minor = $buildProps.Project.PropertyGroup.MinorVersion
+                  $patch = $buildProps.Project.PropertyGroup.PatchVersion
                   
-                  FULL_SEMVER="${CURRENT_MAJOR}.${CURRENT_MINOR}.${CURRENT_PATCH}"
-                  PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+                  $fullSemVer = "$major.$minor.$patch"
+                  $previousTag = ""
                   
-                  echo "FULL_SEMVER=$FULL_SEMVER" >> $GITHUB_ENV
-                  echo "MAJORMINORPATCH=$FULL_SEMVER" >> $GITHUB_ENV
-                  echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_ENV
+                  try {
+                    $previousTag = git describe --tags --abbrev=0 2>$null
+                  } catch {
+                    Write-Host "No previous tag found"
+                  }
+                  
+                  echo "FULL_SEMVER=$fullSemVer" >> $env:GITHUB_ENV
+                  echo "MAJORMINORPATCH=$fullSemVer" >> $env:GITHUB_ENV
+                  echo "PREVIOUS_TAG=$previousTag" >> $env:GITHUB_ENV
 
             - name: Get Latest Release from GitHub
               id: get-release
@@ -223,67 +257,75 @@ jobs:
                       }
 
             - name: Compare GitHub Tag with GitVersion (SemVer)
-              shell: bash
+              shell: pwsh
               run: |
-                  GH_LATEST_TAG_RAW="${{ steps.get-release.outputs.latest_tag }}"
-                  FULL_SEMVER="${{ env.FULL_SEMVER }}"
+                  $ghLatestTagRaw = "${{ steps.get-release.outputs.latest_tag }}"
+                  $fullSemVer = "${{ env.FULL_SEMVER }}"
                   
-                  if [ -z "$GH_LATEST_TAG_RAW" ]; then
-                    echo "No previous GitHub release found. We'll do a brand-new release."
+                  if ([string]::IsNullOrEmpty($ghLatestTagRaw)) {
+                    Write-Host "No previous GitHub release found. We'll do a brand-new release."
                     exit 0
-                  fi
+                  }
                   
-                  GH_LATEST_TAG="${GH_LATEST_TAG_RAW#v}"
-                  CLEAN_SEMVER="${FULL_SEMVER%%-*}"
+                  $ghLatestTag = $ghLatestTagRaw -replace '^v', ''
+                  $cleanSemVer = $fullSemVer -replace '-.*$', ''
                   
-                  GH_MAJOR="$(echo "$GH_LATEST_TAG" | cut -d'.' -f1)"
-                  GH_MINOR="$(echo "$GH_LATEST_TAG" | cut -d'.' -f2)"
-                  GH_PATCH="$(echo "$GH_LATEST_TAG" | cut -d'.' -f3)"
-                  GIT_MAJOR="$(echo "$CLEAN_SEMVER" | cut -d'.' -f1)"
-                  GIT_MINOR="$(echo "$CLEAN_SEMVER" | cut -d'.' -f2)"
-                  GIT_PATCH="$(echo "$CLEAN_SEMVER" | cut -d'.' -f3)"
+                  $ghParts = $ghLatestTag.Split('.')
+                  $gitParts = $cleanSemVer.Split('.')
                   
-                  echo "GitHub's release version: $GH_MAJOR.$GH_MINOR.$GH_PATCH"
-                  echo "Local version:           $GIT_MAJOR.$GIT_MINOR.$GIT_PATCH"
+                  $ghMajor = [int]$ghParts[0]
+                  $ghMinor = [int]$ghParts[1]
+                  $ghPatch = [int]$ghParts[2]
+                  $gitMajor = [int]$gitParts[0]
+                  $gitMinor = [int]$gitParts[1]
+                  $gitPatch = [int]$gitParts[2]
                   
-                  if [ "$GIT_MAJOR" -gt "$GH_MAJOR" ] || \
-                     { [ "$GIT_MAJOR" -eq "$GH_MAJOR" ] && [ "$GIT_MINOR" -gt "$GH_MINOR" ]; } || \
-                     { [ "$GIT_MAJOR" -eq "$GH_MAJOR" ] && [ "$GIT_MINOR" -eq "$GH_MINOR" ] && [ "$GIT_PATCH" -gt "$GH_PATCH" ]; }; then
-                    echo "Newer version found locally; proceed with release."
-                  else
-                    echo "Local version is NOT newer. You might decide to skip or handle differently."
-                  fi
+                  Write-Host "GitHub's release version: $ghMajor.$ghMinor.$ghPatch"
+                  Write-Host "Local version:           $gitMajor.$gitMinor.$gitPatch"
+                  
+                  if (($gitMajor -gt $ghMajor) -or 
+                      (($gitMajor -eq $ghMajor) -and ($gitMinor -gt $ghMinor)) -or
+                      (($gitMajor -eq $ghMajor) -and ($gitMinor -eq $ghMinor) -and ($gitPatch -gt $ghPatch))) {
+                    Write-Host "Newer version found locally; proceed with release."
+                  } else {
+                    Write-Host "Local version is NOT newer. You might decide to skip or handle differently."
+                  }
 
             - name: Generate Release Notes
               id: gen-notes
-              shell: bash
+              shell: pwsh
               run: |
-                  GITVERSION_PREVIOUS_TAG="${{ env.PREVIOUS_TAG }}"
-                  GH_LATEST_TAG_RAW="${{ steps.get-release.outputs.latest_tag }}"
-                  FALLBACK_TAG="$GH_LATEST_TAG_RAW"
+                  $gitVersionPreviousTag = "${{ env.PREVIOUS_TAG }}"
+                  $ghLatestTagRaw = "${{ steps.get-release.outputs.latest_tag }}"
+                  $fallbackTag = $ghLatestTagRaw
                   
-                  if [ -z "$GITVERSION_PREVIOUS_TAG" ] && [ -n "$GH_LATEST_TAG_RAW" ]; then
-                    echo "No local previous tag found; falling back to GitHub release tag '$FALLBACK_TAG'."
-                    GITVERSION_PREVIOUS_TAG="$FALLBACK_TAG"
-                  fi
+                  if ([string]::IsNullOrEmpty($gitVersionPreviousTag) -and (-not [string]::IsNullOrEmpty($ghLatestTagRaw))) {
+                    Write-Host "No local previous tag found; falling back to GitHub release tag '$fallbackTag'."
+                    $gitVersionPreviousTag = $fallbackTag
+                  }
                   
-                  if [ -z "$GITVERSION_PREVIOUS_TAG" ]; then
-                    echo "COMMITS<<EOF" >> "$GITHUB_ENV"
-                    echo "No previous tag — skipping commit history." >> "$GITHUB_ENV"
-                    echo "EOF" >> "$GITHUB_ENV"
-                  else
-                    COMMITS=$(git log "$GITVERSION_PREVIOUS_TAG..HEAD" --pretty=format:'- %s (%h)' | grep -v "chore: update version to")
+                  if ([string]::IsNullOrEmpty($gitVersionPreviousTag)) {
+                    $commits = "No previous tag — skipping commit history."
+                  } else {
+                    try {
+                      $commits = git log "$gitVersionPreviousTag..HEAD" --pretty=format:'- %s (%h)' | Where-Object { $_ -notmatch "chore: update version to" }
+                      $commits = $commits -join "`n"
+                    } catch {
+                      $commits = "Unable to generate commit history."
+                    }
+                  }
                   
-                    echo "COMMITS<<EOF" >> "$GITHUB_ENV"
-                    echo "$COMMITS" >> "$GITHUB_ENV"
-                    echo "EOF" >> "$GITHUB_ENV"
-                  fi
+                  $commits | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+                  echo "COMMITS<<EOF" >> $env:GITHUB_ENV
+                  echo $commits >> $env:GITHUB_ENV
+                  echo "EOF" >> $env:GITHUB_ENV
 
             - name: Create Release ZIP
+              shell: pwsh
               run: |
-                  cd ./publish
-                  zip -r ModForwarder-${{ matrix.runtime }}.v${{ env.MAJORMINORPATCH }}.zip ModForwarder-${{ matrix.runtime }}/
-                  cd ..
+                  Set-Location "./publish"
+                  Compress-Archive -Path "ModForwarder-${{ matrix.runtime }}" -DestinationPath "ModForwarder-${{ matrix.runtime }}.v${{ env.MAJORMINORPATCH }}.zip"
+                  Set-Location ".."
 
             - name: Upload Build Artifacts
               uses: actions/upload-artifact@v4
@@ -317,16 +359,18 @@ jobs:
 
             - name: Notify on Success
               if: success()
+              shell: pwsh
               run: |
-                  echo "✅ Release v${{ env.MAJORMINORPATCH }} created successfully for ${{ matrix.runtime }}!"
-                  if [ "${{ matrix.runtime }}" == "win-x64" ]; then
-                    echo "📦 Download: https://github.com/${{ github.repository }}/releases/tag/v${{ env.MAJORMINORPATCH }}"
-                  fi
+                  Write-Host "✅ Release v${{ env.MAJORMINORPATCH }} created successfully for ${{ matrix.runtime }}!"
+                  if ("${{ matrix.runtime }}" -eq "win-x64") {
+                    Write-Host "📦 Download: https://github.com/${{ github.repository }}/releases/tag/v${{ env.MAJORMINORPATCH }}"
+                  }
 
             - name: Rollback on Failure
               if: failure()
+              shell: pwsh
               run: |
-                  echo "❌ Build failed for ${{ matrix.runtime }}, rolling back version commit..."
+                  Write-Host "❌ Build failed for ${{ matrix.runtime }}, rolling back version commit..."
                   git reset --hard HEAD~1
                   git push --force-with-lease
               continue-on-error: true
