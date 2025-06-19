@@ -1,6 +1,6 @@
-# ModForwarder
+# Atomos
 
-ModForwarder is a tool for managing and installing mods for Final Fantasy XIV through integration with Penumbra.
+Atomos is a tool for managing and installing mods for Final Fantasy XIV through integration with Penumbra.
 
 ## Getting Started
 
@@ -21,7 +21,6 @@ If you encounter any issues, please report them in the **Penumbra Mod Forwarder*
 
 ## Known Issues
 
-- **No Auto-Updates**: Auto-updating is partially implemented but not fully functional yet
 - **Beta Releases**: Do not enable beta releases as this may cause update loops
 - **Large Mod Files**: Large zip files may take time to unpack (optimisation in progress)
 - **TexTools Conversion**: Occasional TexTools conversion failures may occur (program continues to function)
@@ -55,10 +54,8 @@ When Sentry logging is enabled, the following information is automatically sent 
 
 This helps us identify and fix issues quickly. Error reporting is optional and can be disabled in settings.
 
-
-## Development
-
-The source code is available on GitHub, and automated builds will be implemented in the coming weeks/months.
+## Upcoming Features
+- Plugin Framework (XMA integration will be moved to this)
 
 ## Contributing
 
