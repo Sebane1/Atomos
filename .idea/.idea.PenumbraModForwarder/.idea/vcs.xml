@@ -3,5 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/CommonLib" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/CommonLib/SevenZipExtractor" vcs="Git" />
   </component>
 </project>

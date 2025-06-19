@@ -103,7 +103,7 @@ jobs:
               id: create-pr
               uses: peter-evans/create-pull-request@v5
               with:
-                  token: ${{ steps.app-token.outputs.token }} 
+                  token: ${{ steps.app-token.outputs.token }}
                   commit-message: "chore: update version to ${{ steps.gitversion.outputs.fullsemver }} (isBeta=${{ github.event.inputs.isBeta }})"
                   title: "🤖 Version Update: ${{ steps.gitversion.outputs.fullsemver }}"
                   body: |
@@ -176,15 +176,12 @@ jobs:
                   echo "major=${{ steps.gitversion.outputs.major }}" >> $env:GITHUB_OUTPUT
                   echo "minor=${{ steps.gitversion.outputs.minor }}" >> $env:GITHUB_OUTPUT
                   echo "patch=${{ steps.gitversion.outputs.patch }}" >> $env:GITHUB_OUTPUT
-
+    
     build-and-release:
         needs: version-update
         runs-on: windows-latest
         env:
             SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-        strategy:
-            matrix:
-                runtime: [win-x64, win-x86, win-arm64]
         steps:
             - name: Checkout Updated Code
               uses: actions/checkout@v4
@@ -211,7 +208,7 @@ jobs:
 
             - name: Build Solution
               run: dotnet build --configuration Release --verbosity minimal
-            
+
             - name: Run Tests
               run: dotnet test --configuration Release --no-build --verbosity normal
               continue-on-error: true
@@ -220,7 +217,7 @@ jobs:
               shell: pwsh
               run: |
                   # Create main publish directory
-                  New-Item -ItemType Directory -Path "./publish/ModForwarder-${{ matrix.runtime }}" -Force
+                  New-Item -ItemType Directory -Path "./publish/ModForwarder-win-x64" -Force
                   
                   # Publish Console Tooling with optimizations
                   dotnet publish PenumbraModForwarder.ConsoleTooling `
@@ -229,8 +226,8 @@ jobs:
                     -p:PublishReadyToRun=true `
                     --self-contained=true `
                     -p:DebugType=None -p:DebugSymbols=false `
-                    -r ${{ matrix.runtime }} `
-                    -o "./publish/temp-console-${{ matrix.runtime }}" `
+                    -r win-x64 `
+                    -o "./publish/temp-console-win-x64" `
                     -f net9.0
                   
                   # Publish UI Application with optimizations
@@ -240,8 +237,8 @@ jobs:
                     -p:PublishReadyToRun=true `
                     --self-contained=true `
                     -p:DebugType=None -p:DebugSymbols=false `
-                    -r ${{ matrix.runtime }} `
-                    -o "./publish/temp-ui-${{ matrix.runtime }}" `
+                    -r win-x64 `
+                    -o "./publish/temp-ui-win-x64" `
                     -f net9.0
                   
                   # Publish Background Worker with optimizations
@@ -251,25 +248,25 @@ jobs:
                     -p:PublishReadyToRun=true `
                     --self-contained=true `
                     -p:DebugType=None -p:DebugSymbols=false `
-                    -r ${{ matrix.runtime }} `
-                    -o "./publish/temp-worker-${{ matrix.runtime }}" `
+                    -r win-x64 `
+                    -o "./publish/temp-worker-win-x64" `
                     -f net9.0
                   
                   # Move all files to the root ModForwarder directory
-                  Copy-Item -Path "./publish/temp-console-${{ matrix.runtime }}/*" -Destination "./publish/ModForwarder-${{ matrix.runtime }}/" -Recurse -Force
-                  Copy-Item -Path "./publish/temp-ui-${{ matrix.runtime }}/*" -Destination "./publish/ModForwarder-${{ matrix.runtime }}/" -Recurse -Force
-                  Copy-Item -Path "./publish/temp-worker-${{ matrix.runtime }}/*" -Destination "./publish/ModForwarder-${{ matrix.runtime }}/" -Recurse -Force
+                  Copy-Item -Path "./publish/temp-console-win-x64/*" -Destination "./publish/ModForwarder-win-x64/" -Recurse -Force
+                  Copy-Item -Path "./publish/temp-ui-win-x64/*" -Destination "./publish/ModForwarder-win-x64/" -Recurse -Force
+                  Copy-Item -Path "./publish/temp-worker-win-x64/*" -Destination "./publish/ModForwarder-win-x64/" -Recurse -Force
                   
                   # Clean up temporary directories
-                  Remove-Item -Path "./publish/temp-console-${{ matrix.runtime }}" -Recurse -Force
-                  Remove-Item -Path "./publish/temp-ui-${{ matrix.runtime }}" -Recurse -Force
-                  Remove-Item -Path "./publish/temp-worker-${{ matrix.runtime }}" -Recurse -Force
+                  Remove-Item -Path "./publish/temp-console-win-x64" -Recurse -Force
+                  Remove-Item -Path "./publish/temp-ui-win-x64" -Recurse -Force
+                  Remove-Item -Path "./publish/temp-worker-win-x64" -Recurse -Force
 
             - name: Validate Executables
               shell: pwsh
               run: |
                   # Verify executables were created and are not zero-byte
-                  $exeFiles = Get-ChildItem -Path "./publish/ModForwarder-${{ matrix.runtime }}/" -Filter "*.exe"
+                  $exeFiles = Get-ChildItem -Path "./publish/ModForwarder-win-x64/" -Filter "*.exe"
                   foreach ($exe in $exeFiles) {
                     if ($exe.Length -eq 0) {
                       Write-Error "Error: $($exe.Name) is empty"
@@ -284,17 +281,16 @@ jobs:
               run: |
                   Set-Location "./publish"
                   # Use "Windows" in the filename so the updater can find it
-                  $archSuffix = "${{ matrix.runtime }}".Replace("win-", "")
-                  Compress-Archive -Path "ModForwarder-${{ matrix.runtime }}" -DestinationPath "ModForwarder-Windows-$archSuffix.v${{ needs.version-update.outputs.version }}.zip"
+                  Compress-Archive -Path "ModForwarder-win-x64" -DestinationPath "ModForwarder-Windows-x64.v${{ needs.version-update.outputs.version }}.zip"
                   Set-Location ".."
 
             - name: Upload Build Artifacts
               uses: actions/upload-artifact@v4
               with:
-                  name: ModForwarder-${{ matrix.runtime }}-v${{ needs.version-update.outputs.version }}
-                  path: ./publish/ModForwarder-Windows-*.v${{ needs.version-update.outputs.version }}.zip
+                  name: ModForwarder-win-x64-v${{ needs.version-update.outputs.version }}
+                  path: ./publish/ModForwarder-Windows-x64.v${{ needs.version-update.outputs.version }}.zip
                   retention-days: 6
-
+    
     create-release:
         needs: [version-update, build-and-release]
         runs-on: windows-latest
@@ -389,13 +385,11 @@ jobs:
                       ${{ env.COMMITS }}
                       
                       ## Available Downloads:
-                      - `ModForwarder-Windows-x64.v${{ needs.version-update.outputs.version }}.zip` - Windows 64-bit
-                      - `ModForwarder-Windows-x86.v${{ needs.version-update.outputs.version }}.zip` - Windows 32-bit  
-                      - `ModForwarder-Windows-arm64.v${{ needs.version-update.outputs.version }}.zip` - Windows ARM64
+                      - `ModForwarder-Windows-x64.v${{ needs.version-update.outputs.version }}.zip` - Windows 64-bit (Universal)
+                      
+                      **Note:** This release contains a universal x64 build that works on all Windows systems.
                   files: |
                       ./publish/ModForwarder-Windows-x64.v${{ needs.version-update.outputs.version }}.zip
-                      ./publish/ModForwarder-Windows-x86.v${{ needs.version-update.outputs.version }}.zip
-                      ./publish/ModForwarder-Windows-arm64.v${{ needs.version-update.outputs.version }}.zip
                   draft: false
                   prerelease: ${{ github.event.inputs.isBeta == 'true' }}
               env:
@@ -405,5 +399,5 @@ jobs:
               if: success()
               shell: pwsh
               run: |
-                  Write-Host "✅ Release v${{ needs.version-update.outputs.version }} created successfully with all platforms!"
+                  Write-Host "✅ Release v${{ needs.version-update.outputs.version }} created successfully with x64 build!"
                   Write-Host "📦 Download: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.version-update.outputs.version }}"
