@@ -1,15 +1,11 @@
-﻿using System;
-using System.Diagnostics;
-using Atomos.UI.ViewModels;
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
-using CommonLib.Models;
 
 namespace Atomos.UI.Views;
 
-public partial class HomeView : UserControl
+public partial class PluginView : UserControl
 {
-    public HomeView()
+    public PluginView()
     {
         InitializeComponent();
     }

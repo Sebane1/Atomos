@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Atomos.UI.Extensions;
@@ -31,6 +32,13 @@ public class MainWindowViewModel : ViewModelBase
     private ViewModelBase _currentPage = null!;
     private MenuItem _selectedMenuItem = null!;
     private Size _windowSize = new Size(800, 600);
+
+    private PluginSettingsViewModel? _pluginSettingsViewModel;
+    public PluginSettingsViewModel? PluginSettingsViewModel
+    {
+        get => _pluginSettingsViewModel;
+        set => this.RaiseAndSetIfChanged(ref _pluginSettingsViewModel, value);
+    }
 
     public ObservableCollection<MenuItem> MenuItems { get; }
     public ObservableCollection<Notification> Notifications =>
@@ -118,6 +126,11 @@ public class MainWindowViewModel : ViewModelBase
 
         var homeViewModel = _serviceProvider.GetRequiredService<HomeViewModel>();
         var modsViewModel = _serviceProvider.GetRequiredService<ModsViewModel>();
+        var pluginsViewModel = _serviceProvider.GetRequiredService<PluginViewModel>();
+        var pluginDataViewModel = _serviceProvider.GetRequiredService<PluginDataViewModel>(); // Add this line
+
+        // Subscribe to plugin settings requests
+        pluginsViewModel.PluginSettingsRequested += OnPluginSettingsRequested;
 
         MenuItems = new ObservableCollection<MenuItem>
         {
@@ -130,6 +143,16 @@ public class MainWindowViewModel : ViewModelBase
                 "Mods",
                 app?.Resources["MenuIcon"] as StreamGeometry ?? StreamGeometry.Parse(""),
                 modsViewModel
+            ),
+            new MenuItem(
+                "Plugins",
+                app?.Resources["PluginsIcon"] as StreamGeometry ?? StreamGeometry.Parse("M12 2L2 7V10C2 16 6 20.5 12 22C18 20.5 22 16 22 10V7L12 2M10 17L6 13L7.41 11.59L10 14.17L16.59 7.58L18 9L10 17Z"),
+                pluginsViewModel
+            ),
+            new MenuItem(
+                "Plugin Data",
+                app?.Resources["DataIcon"] as StreamGeometry ?? StreamGeometry.Parse("M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3M9,17H7V10H9V17M13,17H11V7H13V17M17,17H15V13H17V17Z"),
+                pluginDataViewModel
             )
         };
 
@@ -145,6 +168,21 @@ public class MainWindowViewModel : ViewModelBase
         InstallViewModel = new InstallViewModel(_webSocketClient, _soundManagerService, _taskbarFlashService);
 
         _ = InitializeWebSocketConnection(port);
+    }
+
+    private void OnPluginSettingsRequested(PluginSettingsViewModel settingsViewModel)
+    {
+        _logger.Info("Plugin settings requested for {PluginId}", settingsViewModel.Plugin.PluginId);
+    
+        // Subscribe to the closed event
+        settingsViewModel.Closed += () => {
+            _logger.Info("Plugin settings dialog closed, clearing PluginSettingsViewModel");
+            PluginSettingsViewModel = null;
+        };
+    
+        // Show the dialog and assign it
+        settingsViewModel.Show();
+        PluginSettingsViewModel = settingsViewModel;
     }
 
     private async Task InitializeWebSocketConnection(int port)
