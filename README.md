@@ -15,7 +15,6 @@ If you encounter any issues, please report them in the **Penumbra Mod Forwarder*
 ## Features
 
 - **Mod Tracking**: Keeps track of installed mods
-- **XMA Integration**: Browse and install mods directly from XIV Mod Archive (first 2 pages)
 - **Error Reporting**: Optional Sentry integration for automatic error reporting
 - **Penumbra Integration**: Seamless integration with the Penumbra mod framework
 
@@ -24,24 +23,6 @@ If you encounter any issues, please report them in the **Penumbra Mod Forwarder*
 - **Beta Releases**: Do not enable beta releases as this may cause update loops
 - **Large Mod Files**: Large zip files may take time to unpack (optimisation in progress)
 - **TexTools Conversion**: Occasional TexTools conversion failures may occur (program continues to function)
-
-## XMA Integration Setup
-
-To browse and install mods from XIV Mod Archive, you'll need to provide your XMA authentication cookie.
-
-### Security Note
-Your cookie is only used for authenticated requests to XMA. You can review the source code:
-- [HttpClientFactory](https://github.com/CouncilOfTsukuyomi/PMF.CommonLib/blob/main/CommonLib/Factory/XmaHttpClientFactory.cs)
-- [Mod Display](https://github.com/CouncilOfTsukuyomi/PMF.CommonLib/blob/main/CommonLib/Services/XmaModDisplay.cs)
-
-### Setup Steps
-
-1. Install a cookie editor extension for your browser (recommended: [Cookie Editor](https://cookie-editor.com/))
-2. Log into your XIV Mod Archive account
-3. Open the cookie editor extension and locate the cookie named `connect.sid`
-4. Copy the cookie value (**Keep this private - it's your login credential!**)
-5. In ModForwarder, go to Settings → Advanced
-6. Paste the value into the "XIV Mod Archive Cookie" field
 
 ## Error Reporting (Sentry)
 
@@ -55,7 +36,72 @@ When Sentry logging is enabled, the following information is automatically sent 
 This helps us identify and fix issues quickly. Error reporting is optional and can be disabled in settings.
 
 ## Upcoming Features
-- Plugin Framework (XMA integration will be moved to this)
+
+
+## Plugins
+
+Atomos now features a plugin system that allows users and developers to create custom plugins for different mod websites and services.
+
+### Creating Your Own Plugin
+
+A GitHub template is available to help you get started with plugin development:
+**[Plugin Template Repository](https://github.com/CouncilOfTsukuyomi/PluginTemplate)**
+
+This template provides:
+- Basic plugin structure and interfaces
+- Configuration schema examples
+- Build and packaging scripts
+
+## XIV Mod Archive (XMA) Plugin
+
+The XMA Plugin enables browsing and downloading mods from XIV Mod Archive,
+including NSFW content with proper authentication.
+
+**Source Code:** [XMA Plugin Repository](https://github.com/CouncilOfTsukuyomi/XMA-Plugin)
+
+### Setup Instructions
+
+To access NSFW mods and your personal collections on XIV Mod Archive, you'll need to provide your authentication cookie.
+
+#### Security Note
+**Your cookie is only used for authenticated requests to XMA and is stored locally on your machine.**
+
+#### Step-by-Step Setup
+
+1. **Install a cookie editor extension** for your browser:
+    - Recommended: [Cookie Editor](https://cookie-editor.com/)
+    - Available for Chrome, Firefox, and other browsers
+
+2. **Log into XIV Mod Archive**
+    - Go to [XIV Mod Archive](https://www.xivmodarchive.com)
+    - Sign in with your account
+
+3. **Extract your authentication cookie**
+    - Open the cookie editor extension
+    - Find the cookie named `connect.sid`
+    - Copy its value (this is your authentication token)
+
+4. **Configure the plugin in Atomos**
+    - Open Atomos and go to the Plugins section
+    - Find the XMA Plugin and click Settings
+    - Paste the cookie value into the appropriate field
+    - Save your settings
+
+5. **Verify setup**
+    - The plugin should now be able to access NSFW content and your account features
+    - Try browsing mods to confirm everything is working
+
+#### Troubleshooting
+
+- **Cookie not working?** Make sure you copied the entire `connect.sid` value
+- **Still can't see NSFW mods?** Verify your XMA account has NSFW content enabled
+- **Plugin not loading?** Check that the plugin is enabled in the Plugins section
+
+#### Privacy & Security
+
+- Your authentication cookie is stored locally and never transmitted to any servers other than XIV Mod Archive
+- You can remove the cookie at any time by clearing the plugin settings
+- The cookie will expire, according to XIV Mod Archive's session policies
 
 ## Contributing
 
