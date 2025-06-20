@@ -39,7 +39,7 @@ internal class Program
 
     private static void Main(string[] args)
     {
-        using (new Mutex(true, "PenumbraModForwarder.Launcher", out var isNewInstance))
+        using (new Mutex(true, "Atomos.Launcher", out var isNewInstance))
         {
             if (!isNewInstance)
             {
@@ -76,7 +76,7 @@ internal class Program
 
             // Check for updates
             var isUpdateNeeded = _updateService
-                .NeedsUpdateAsync(semVersion, "CouncilOfTsukuyomi/ModForwarder")
+                .NeedsUpdateAsync(semVersion, "CouncilOfTsukuyomi/Atomos")
                 .GetAwaiter()
                 .GetResult();
 
@@ -92,7 +92,7 @@ internal class Program
                 var updateResult = _runUpdater
                     .RunDownloadedUpdaterAsync(
                         semVersion,
-                        "CouncilOfTsukuyomi/ModForwarder",
+                        "CouncilOfTsukuyomi/Atomos",
                         installPath,
                         true,
                         programToRunAfterInstallation)

@@ -293,8 +293,7 @@ jobs:
               shell: pwsh
               run: |
                   Set-Location "./publish"
-                  # Compress the contents of the folder, not the folder itself
-                  Compress-Archive -Path "Atomos-win-x64/*" -DestinationPath "Atomos-Windows-x64.v${{ needs.version-update.outputs.version }}.zip"
+                  Compress-Archive -Path "Atomos-win-x64" -DestinationPath "Atomos-Windows-x64.v${{ needs.version-update.outputs.version }}.zip"
                   Set-Location ".."
 
             - name: Upload Build Artifacts
