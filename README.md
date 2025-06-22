@@ -61,7 +61,7 @@ including NSFW content with proper authentication.
 
 ### Setup Instructions
 
-To access NSFW mods and your personal collections on XIV Mod Archive, you'll need to provide your authentication cookie.
+To access NSFW mods on XIV Mod Archive, you'll need to provide your authentication cookie.
 
 #### Security Note
 **Your cookie is only used for authenticated requests to XMA and is stored locally on your machine.**
