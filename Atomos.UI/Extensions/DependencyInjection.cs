@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 using Atomos.Statistics.Services;
 using Atomos.UI.Controllers;
 using Atomos.UI.Interfaces;
@@ -13,6 +15,7 @@ using CommonLib.Models;
 using CommonLib.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PluginManager.Core.Extensions;
 using IRegistryHelper = Atomos.UI.Interfaces.IRegistryHelper;
 using RegistryHelper = Atomos.UI.Services.RegistryHelper;
@@ -28,10 +31,8 @@ public static class DependencyInjection
             cfg.AddProfile<ConvertConfiguration>();
         });
         
-        // Register ConfigurationModel as a singleton
         services.AddSingleton<ConfigurationModel>();
-
-        // Services
+        
         services.AddSingleton<ISoundManagerService, SoundManagerService>();
         services.AddSingleton<IAria2Service>(_ => new Aria2Service(AppContext.BaseDirectory));
         services.AddSingleton<IRegistryHelper, RegistryHelper>();
@@ -63,33 +64,51 @@ public static class DependencyInjection
         services.AddSingleton<ITrayIconController, TrayIconController>();
         services.AddSingleton<ITrayIconManager, TrayIconManager>();
         services.AddSingleton<ITaskbarFlashService, TaskbarFlashService>();
-
-        // ViewModels
+        
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<ErrorWindowViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<ModsViewModel>();
         services.AddSingleton<HomeViewModel>();
-        services.AddSingleton<PluginViewModel>();
+        services.AddScoped<PluginViewModel>();
         services.AddTransient<PluginDataViewModel>();
-
-        // Views
+        
         services.AddSingleton<MainWindow>();
         services.AddSingleton<ErrorWindowViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<ModsViewModel>();
         services.AddSingleton<HomeViewModel>();
-        services.AddSingleton<PluginView>();
+        services.AddScoped<PluginView>();
         
-        // Plugin Services - Enhanced version with GitHub integration
-        services.AddPluginServices();
-        services.AddDefaultPluginServices(
-            registryUrl: "https://raw.githubusercontent.com/CouncilOfTsukuyomi/StaticResources/refs/heads/main/plugins.json",
-            useGitHubIntegration: true);
+        // Replace the individual plugin service registrations with the comprehensive method
+        services.AddPluginServicesWithUpdates(options =>
+        {
+            options.RegistryUrl = "https://raw.githubusercontent.com/CouncilOfTsukuyomi/StaticResources/refs/heads/main/plugins.json";
+            options.PluginBasePath = Path.Combine(AppContext.BaseDirectory, "plugins");
+        });
         
         services.SetupLogging();
 
         return services;
+    }
+
+    /// <summary>
+    /// Initialise application services including early plugin services
+    /// Call this method after building the service provider but before showing the main window
+    /// </summary>
+    public static async Task InitializeApplicationServicesAsync(this IServiceProvider serviceProvider)
+    {
+        try
+        {
+            // Initialize plugin services (includes early plugin updates)
+            await serviceProvider.InitializePluginServicesAsync();
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't stop the application
+            var logger = serviceProvider.GetService<ILogger<Program>>();
+            logger?.LogError(ex, "Failed to initialize plugin services, but application will continue");
+        }
     }
     
     private static void SetupLogging(this IServiceCollection services)
