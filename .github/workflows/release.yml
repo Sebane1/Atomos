@@ -90,14 +90,20 @@ jobs:
                   $content = $content -replace '<MajorVersion>.*</MajorVersion>', "<MajorVersion>$major</MajorVersion>"
                   $content = $content -replace '<MinorVersion>.*</MinorVersion>', "<MinorVersion>$minor</MinorVersion>"
                   $content = $content -replace '<PatchVersion>.*</PatchVersion>', "<PatchVersion>$patch</PatchVersion>"
-                  Set-Content "Directory.Build.props" -Value $content
+                  
+                  # Remove any trailing newlines and write without adding extra ones
+                  $content = $content.TrimEnd("`r", "`n")
+                  [System.IO.File]::WriteAllText("Directory.Build.props", $content + "`n", [System.Text.UTF8Encoding]::new($false))
 
             - name: Handle Beta Builds
               shell: pwsh
               run: |
                   $content = Get-Content "Directory.Build.props" -Raw
                   $content = $content -replace '<IsBeta>.*</IsBeta>', "<IsBeta>${{ github.event.inputs.isBeta }}</IsBeta>"
-                  Set-Content "Directory.Build.props" -Value $content
+                  
+                  # Remove any trailing newlines and write without adding extra ones
+                  $content = $content.TrimEnd("`r", "`n")
+                  [System.IO.File]::WriteAllText("Directory.Build.props", $content + "`n", [System.Text.UTF8Encoding]::new($false))
 
             - name: Create Pull Request for Version Update
               id: create-pr
