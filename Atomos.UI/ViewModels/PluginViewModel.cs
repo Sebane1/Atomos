@@ -388,7 +388,7 @@ public class PluginViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            var githubUrl = "https://github.com/CouncilOfTsukuyomi/Atomos/issues/new";
+            var githubUrl = "https://github.com/CouncilOfTsukuyomi/Atomos/issues/new?template=plugin-request.md";
             OpenUrl(githubUrl);
             _logger.Info("Opened GitHub Issues page");
         }
