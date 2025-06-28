@@ -1,5 +1,15 @@
 # Atomos
 
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/CouncilOfTsukuyomi/Atomos)](https://github.com/CouncilOfTsukuyomi/Atomos/releases)
+[![GitHub all releases](https://img.shields.io/github/downloads/CouncilOfTsukuyomi/Atomos/total)](https://github.com/CouncilOfTsukuyomi/Atomos/releases)
+[![GitHub release (latest by date)](https://img.shields.io/github/downloads/CouncilOfTsukuyomi/Atomos/latest/total)](https://github.com/CouncilOfTsukuyomi/Atomos/releases/latest)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/CouncilOfTsukuyomi/Atomos/release.yml?branch=main)](https://github.com/CouncilOfTsukuyomi/Atomos/actions)
+
+[![GitHub issues](https://img.shields.io/github/issues/CouncilOfTsukuyomi/Atomos)](https://github.com/CouncilOfTsukuyomi/Atomos/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/CouncilOfTsukuyomi/Atomos)](https://github.com/CouncilOfTsukuyomi/Atomos/pulls)
+[![GitHub stars](https://img.shields.io/github/stars/CouncilOfTsukuyomi/Atomos?style=social)](https://github.com/CouncilOfTsukuyomi/Atomos/stargazers)
+[![License](https://img.shields.io/github/license/CouncilOfTsukuyomi/Atomos)](https://github.com/CouncilOfTsukuyomi/Atomos/blob/main/LICENSE)
+
 Atomos is a tool for managing and installing mods for Final Fantasy XIV through integration with Penumbra.
 
 ## Getting Started
