@@ -20,6 +20,11 @@ on:
                 options:
                     - "false"
                     - "true"
+            sourceBranch:
+                description: "Source branch (leave empty for auto-selection)"
+                required: false
+                default: ""
+                type: string
 
 permissions:
     contents: write
@@ -35,7 +40,23 @@ jobs:
             major: ${{ steps.version-output.outputs.major }}
             minor: ${{ steps.version-output.outputs.minor }}
             patch: ${{ steps.version-output.outputs.patch }}
+            source_branch: ${{ steps.determine-branch.outputs.source_branch }}
         steps:
+            - name: Determine Source Branch
+              id: determine-branch
+              shell: pwsh
+              run: |
+                  if ("${{ github.event.inputs.sourceBranch }}" -ne "") {
+                    echo "source_branch=${{ github.event.inputs.sourceBranch }}" >> $env:GITHUB_OUTPUT
+                    Write-Host "Using manually specified branch: ${{ github.event.inputs.sourceBranch }}"
+                  } elseif ("${{ github.event.inputs.isBeta }}" -eq "true") {
+                    echo "source_branch=develop" >> $env:GITHUB_OUTPUT
+                    Write-Host "Beta release detected - using develop branch"
+                  } else {
+                    echo "source_branch=main" >> $env:GITHUB_OUTPUT
+                    Write-Host "Production release detected - using main branch"
+                  }
+
             - uses: actions/create-github-app-token@v1
               id: app-token
               with:
@@ -48,6 +69,7 @@ jobs:
                   fetch-depth: 0
                   submodules: recursive
                   token: ${{ steps.app-token.outputs.token }}
+                  ref: ${{ steps.determine-branch.outputs.source_branch }}
 
             - name: Set Git User
               run: |
@@ -120,9 +142,11 @@ jobs:
                       - **Version**: ${{ steps.gitversion.outputs.fullsemver }}
                       - **Beta**: ${{ github.event.inputs.isBeta }}
                       - **Release Type**: ${{ github.event.inputs.releaseType }}
+                      - **Source Branch**: ${{ steps.determine-branch.outputs.source_branch }}
                       
                       This PR was automatically created by the release workflow.
                   branch: version-update-${{ steps.gitversion.outputs.fullsemver }}
+                  base: ${{ steps.determine-branch.outputs.source_branch }}
                   delete-branch: true
 
             - name: Auto-merge Version Update PR
@@ -196,7 +220,7 @@ jobs:
               with:
                   fetch-depth: 0
                   submodules: recursive
-                  ref: main  # Make sure we get the updated main branch
+                  ref: ${{ needs.version-update.outputs.source_branch }}
 
             - name: Cache NuGet packages
               uses: actions/cache@v4
@@ -322,7 +346,7 @@ jobs:
               with:
                   fetch-depth: 0
                   submodules: recursive
-                  ref: main
+                  ref: ${{ needs.version-update.outputs.source_branch }}
 
             - name: Get Latest Release from GitHub
               id: get-release
@@ -345,6 +369,7 @@ jobs:
               with:
                   script: |
                       const latestTag = "${{ steps.get-release.outputs.latest_tag }}";
+                      const sourceBranch = "${{ needs.version-update.outputs.source_branch }}";
                       
                       if (!latestTag) {
                         core.exportVariable('COMMITS', 'No previous tag — first release.');
@@ -352,12 +377,12 @@ jobs:
                       }
                       
                       try {
-                        // Get commits since last release
+                        // Get commits since last release on the current branch
                         const comparison = await github.rest.repos.compareCommits({
                           owner: context.repo.owner,
                           repo: context.repo.repo,
                           base: latestTag,
-                          head: 'HEAD'
+                          head: sourceBranch
                         });
                       
                         const commits = comparison.data.commits
@@ -405,7 +430,7 @@ jobs:
               uses: softprops/action-gh-release@v1
               with:
                   tag_name: v${{ needs.version-update.outputs.version }}
-                  name: Release v${{ needs.version-update.outputs.version }}
+                  name: Release v${{ needs.version-update.outputs.version }}${{ github.event.inputs.isBeta == 'true' && ' (Beta)' || '' }}
                   body: |
                       ## Changes (since last release):
                       ${{ env.COMMITS }}
@@ -414,6 +439,9 @@ jobs:
                       - `Atomos-Windows-x64.v${{ needs.version-update.outputs.version }}.zip` - Windows 64-bit (Universal)
                       
                       **Note:** This release contains a universal x64 build that works on all Windows systems.
+                      
+                      **Source Branch:** ${{ needs.version-update.outputs.source_branch }}
+                      **Release Type:** ${{ github.event.inputs.isBeta == 'true' && 'Beta' || 'Production' }}
                   files: |
                       ./publish/Atomos-Windows-x64.v${{ needs.version-update.outputs.version }}.zip
                   draft: false
@@ -425,5 +453,7 @@ jobs:
               if: success()
               shell: pwsh
               run: |
-                  Write-Host "✅ Release v${{ needs.version-update.outputs.version }} created successfully with x64 build!"
+                  $releaseType = if ("${{ github.event.inputs.isBeta }}" -eq "true") { "Beta" } else { "Production" }
+                  $sourceBranch = "${{ needs.version-update.outputs.source_branch }}"
+                  Write-Host "✅ $releaseType Release v${{ needs.version-update.outputs.version }} created successfully from $sourceBranch branch!"
                   Write-Host "📦 Download: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.version-update.outputs.version }}"
