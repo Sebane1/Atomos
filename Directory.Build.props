@@ -3,10 +3,10 @@
         <!-- Version components -->
         <MajorVersion>1</MajorVersion>
         <MinorVersion>1</MinorVersion>
-        <PatchVersion>11</PatchVersion>
+        <PatchVersion>10</PatchVersion>
 
         <!-- Controls whether we're doing a beta build -->
-        <IsBeta>true</IsBeta>
+        <IsBeta>false</IsBeta>
     </PropertyGroup>
 
     <!-- If we're building a beta release, set the prerelease label to 'b' -->
@@ -29,10 +29,14 @@
         <VersionPrefix>$(MajorVersion).$(MinorVersion).$(PatchVersion)-$(PrereleaseLabel)</VersionPrefix>
     </PropertyGroup>
 
-    <!-- Update other version properties from VersionPrefix -->
+    <!-- Update version properties -->
     <PropertyGroup>
-        <FileVersion>$(VersionPrefix)</FileVersion>
-        <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
-        <AssemblyInformationalVersion>v$(VersionPrefix)</AssemblyInformationalVersion>
+        <!-- For NuGet packages and display, use the full version with prerelease -->
+        <PackageVersion>$(VersionPrefix)</PackageVersion>
+        <InformationalVersion>v$(VersionPrefix)</InformationalVersion>
+
+        <!-- For assemblies, use only the numeric version without prerelease -->
+        <AssemblyVersion>$(MajorVersion).$(MinorVersion).$(PatchVersion).0</AssemblyVersion>
+        <FileVersion>$(MajorVersion).$(MinorVersion).$(PatchVersion).0</FileVersion>
     </PropertyGroup>
 </Project>
