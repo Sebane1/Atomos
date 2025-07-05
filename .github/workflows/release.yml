@@ -223,6 +223,8 @@ jobs:
 
             - name: Publish Solution Components
               shell: pwsh
+              env:
+                  SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
               run: |
                   # Create main publish directory
                   New-Item -ItemType Directory -Path "./publish/Atomos-win-x64" -Force
