@@ -1,5 +1,4 @@
-﻿
-name: Cleanup Old Releases
+﻿name: Cleanup Old Releases
 
 on:
     schedule:
@@ -53,9 +52,15 @@ jobs:
                   
                   echo "🧹 Starting cleanup of old releases and tags..."
                   
+                  # Initialize counters
+                  releases_deleted=0
+                  tags_deleted=0
+                  declare -a deleted_releases_list
+                  declare -a deleted_tags_list
+                  
                   # Get all releases sorted by creation date (newest first)
                   echo "📋 Fetching all releases..."
-                  releases=$(gh release list --repo "$REPO" --limit 1000 --json tagName,createdAt,prerelease | jq -r 'sort_by(.createdAt) | reverse | .[].tagName')
+                  releases=$(gh release list --repo "$REPO" --limit 1000 --json tagName,createdAt,isPrerelease | jq -r 'sort_by(.createdAt) | reverse | .[].tagName')
                   
                   if [ -z "$releases" ]; then
                     echo "ℹ️  No releases found. Exiting."
@@ -70,10 +75,11 @@ jobs:
                   
                   # Get production releases (non-prerelease) sorted by creation date
                   echo "🔍 Fetching production releases..."
-                  production_releases=$(gh release list --repo "$REPO" --limit 1000 --json tagName,createdAt,prerelease | jq -r 'sort_by(.createdAt) | reverse | map(select(.prerelease == false)) | .[].tagName')
+                  production_releases=$(gh release list --repo "$REPO" --limit 1000 --json tagName,createdAt,isPrerelease | jq -r 'sort_by(.createdAt) | reverse | map(select(.isPrerelease == false)) | .[].tagName')
                   
                   if [ -z "$production_releases" ]; then
                     echo "ℹ️  No production releases found. Keeping all releases."
+                    echo "📊 Deletion Summary: 0 releases deleted, 0 tags deleted"
                     exit 0
                   fi
                   
@@ -112,17 +118,25 @@ jobs:
                       echo "🔄 Starting deletion process..."
                   
                       for tag in $releases_to_delete; do
-                        echo "🗑️  Deleting release and tag: $tag"
+                        echo "🗑️  Processing: $tag"
                   
                         # Delete the release
                         if gh release view "$tag" --repo "$REPO" >/dev/null 2>&1; then
-                          gh release delete "$tag" --repo "$REPO" --yes
-                          echo "✅ Deleted release: $tag"
+                          if gh release delete "$tag" --repo "$REPO" --yes; then
+                            echo "✅ Deleted release: $tag"
+                            deleted_releases_list+=("$tag")
+                            ((releases_deleted++))
+                          else
+                            echo "❌ Failed to delete release: $tag"
+                          fi
                         else
                           echo "⚠️  Release $tag not found, skipping release deletion"
                         fi
                   
                         # Delete the tag
+                        tag_deleted=false
+                  
+                        # Delete local tag if it exists
                         if git tag -l | grep -q "^$tag$"; then
                           git tag -d "$tag" 2>/dev/null || true
                           echo "🏷️  Deleted local tag: $tag"
@@ -131,23 +145,55 @@ jobs:
                         # Delete remote tag
                         if git push origin --delete "$tag" 2>/dev/null; then
                           echo "✅ Deleted remote tag: $tag"
+                          if [ "$tag_deleted" = false ]; then
+                            deleted_tags_list+=("$tag")
+                            ((tags_deleted++))
+                            tag_deleted=true
+                          fi
                         else
                           echo "⚠️  Tag $tag not found on remote or already deleted"
                         fi
                       done
                   
+                      echo ""
                       echo "🎉 Cleanup completed!"
+                      echo ""
+                      echo "📊 DELETION SUMMARY:"
+                      echo "├── Releases deleted: $releases_deleted"
+                      echo "├── Tags deleted: $tags_deleted"
+                      echo ""
+                  
+                      if [ $releases_deleted -gt 0 ]; then
+                        echo "🗑️  Deleted Releases:"
+                        for release in "${deleted_releases_list[@]}"; do
+                          echo "├── $release"
+                        done
+                        echo ""
+                      fi
+                  
+                      if [ $tags_deleted -gt 0 ]; then
+                        echo "🏷️  Deleted Tags:"
+                        for tag in "${deleted_tags_list[@]}"; do
+                          echo "├── $tag"
+                        done
+                        echo ""
+                      fi
+                  
                     else
                       echo "ℹ️  No releases found older than the 4th newest production release."
+                      echo "📊 Deletion Summary: 0 releases deleted, 0 tags deleted"
                     fi
                   else
                     echo "ℹ️  Only $total_prod_releases production releases found. Keeping all releases (minimum 4 production releases required for cleanup)."
+                    echo "📊 Deletion Summary: 0 releases deleted, 0 tags deleted"
                   fi
                   
                   # Final verification
                   echo "📋 Final summary - Remaining releases:"
-                  gh release list --repo "$REPO" --limit 10 --json tagName,createdAt,prerelease | jq -r 'sort_by(.createdAt) | reverse | .[] | "\(.tagName) - \(.createdAt) - \(if .prerelease then "Beta" else "Production" end)"'
+                  gh release list --repo "$REPO" --limit 10 --json tagName,createdAt,isPrerelease | jq -r 'sort_by(.createdAt) | reverse | .[] | "\(.tagName) - \(.createdAt) - \(if .isPrerelease then "Beta" else "Production" end)"'
 
             - name: Summary
               run: |
                   echo "✅ Cleanup job completed successfully!"
+                  echo "📝 This workflow keeps the latest 4 production releases and any newer beta releases"
+                  echo "⏰ Next scheduled run: Next Sunday at 2 AM UTC"
