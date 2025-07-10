@@ -1,0 +1,153 @@
+﻿
+name: Cleanup Old Releases
+
+on:
+    schedule:
+        # Run every Sunday at 2 AM UTC
+        - cron: '0 2 * * 0'
+    workflow_dispatch:
+
+permissions:
+    contents: write
+    actions: write
+
+jobs:
+    cleanup:
+        runs-on: ubuntu-latest
+        
+        steps:
+            - name: Generate GitHub App Token
+              id: app-token
+              uses: actions/create-github-app-token@v1
+              with:
+                  app-id: ${{ vars.APP_ID }}
+                  private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  token: ${{ steps.app-token.outputs.token }}
+
+            - name: Install GitHub CLI
+              run: |
+                  type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
+                  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+                  && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+                  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+                  && sudo apt update \
+                  && sudo apt install gh -y
+
+            - name: Set Git User
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+            - name: Cleanup old releases and tags
+              env:
+                  GH_TOKEN: ${{ steps.app-token.outputs.token }}
+                  REPO: ${{ github.repository }}
+              run: |
+                  #!/bin/bash
+                  set -e
+                  
+                  echo "🧹 Starting cleanup of old releases and tags..."
+                  
+                  # Get all releases sorted by creation date (newest first)
+                  echo "📋 Fetching all releases..."
+                  releases=$(gh release list --repo "$REPO" --limit 1000 --json tagName,createdAt,prerelease | jq -r 'sort_by(.createdAt) | reverse | .[].tagName')
+                  
+                  if [ -z "$releases" ]; then
+                    echo "ℹ️  No releases found. Exiting."
+                    exit 0
+                  fi
+                  
+                  # Convert to array
+                  release_array=($releases)
+                  total_releases=${#release_array[@]}
+                  
+                  echo "📊 Found $total_releases total releases"
+                  
+                  # Get production releases (non-prerelease) sorted by creation date
+                  echo "🔍 Fetching production releases..."
+                  production_releases=$(gh release list --repo "$REPO" --limit 1000 --json tagName,createdAt,prerelease | jq -r 'sort_by(.createdAt) | reverse | map(select(.prerelease == false)) | .[].tagName')
+                  
+                  if [ -z "$production_releases" ]; then
+                    echo "ℹ️  No production releases found. Keeping all releases."
+                    exit 0
+                  fi
+                  
+                  # Convert to array
+                  prod_release_array=($production_releases)
+                  total_prod_releases=${#prod_release_array[@]}
+                  
+                  echo "📊 Found $total_prod_releases production releases"
+                  
+                  # Keep the latest 4 production releases, but we need to be smarter about what to delete
+                  if [ $total_prod_releases -gt 4 ]; then
+                    # Get the 4th newest production release
+                    fourth_newest_prod="${prod_release_array[3]}"
+                    echo "🎯 Fourth newest production release: $fourth_newest_prod"
+                  
+                    # Get the creation date of the 4th newest production release
+                    fourth_newest_date=$(gh release view "$fourth_newest_prod" --repo "$REPO" --json createdAt | jq -r '.createdAt')
+                    echo "📅 Fourth newest production release date: $fourth_newest_date"
+                  
+                    # Get all releases (including betas) that are older than the 4th newest production release
+                    releases_to_delete=$(gh release list --repo "$REPO" --limit 1000 --json tagName,createdAt | jq -r --arg cutoff_date "$fourth_newest_date" 'sort_by(.createdAt) | reverse | map(select(.createdAt < $cutoff_date)) | .[].tagName')
+                  
+                    if [ -n "$releases_to_delete" ]; then
+                      echo "🗑️  Releases to delete (older than 4th newest production release):"
+                      for tag in $releases_to_delete; do
+                        echo "  - $tag"
+                      done
+                  
+                      echo "💾 Keeping these recent releases:"
+                      recent_releases=$(gh release list --repo "$REPO" --limit 1000 --json tagName,createdAt | jq -r --arg cutoff_date "$fourth_newest_date" 'sort_by(.createdAt) | reverse | map(select(.createdAt >= $cutoff_date)) | .[].tagName')
+                      for tag in $recent_releases; do
+                        echo "  - $tag"
+                      done
+                  
+                      # Confirm before deletion
+                      echo "🔄 Starting deletion process..."
+                  
+                      for tag in $releases_to_delete; do
+                        echo "🗑️  Deleting release and tag: $tag"
+                  
+                        # Delete the release
+                        if gh release view "$tag" --repo "$REPO" >/dev/null 2>&1; then
+                          gh release delete "$tag" --repo "$REPO" --yes
+                          echo "✅ Deleted release: $tag"
+                        else
+                          echo "⚠️  Release $tag not found, skipping release deletion"
+                        fi
+                  
+                        # Delete the tag
+                        if git tag -l | grep -q "^$tag$"; then
+                          git tag -d "$tag" 2>/dev/null || true
+                          echo "🏷️  Deleted local tag: $tag"
+                        fi
+                  
+                        # Delete remote tag
+                        if git push origin --delete "$tag" 2>/dev/null; then
+                          echo "✅ Deleted remote tag: $tag"
+                        else
+                          echo "⚠️  Tag $tag not found on remote or already deleted"
+                        fi
+                      done
+                  
+                      echo "🎉 Cleanup completed!"
+                    else
+                      echo "ℹ️  No releases found older than the 4th newest production release."
+                    fi
+                  else
+                    echo "ℹ️  Only $total_prod_releases production releases found. Keeping all releases (minimum 4 production releases required for cleanup)."
+                  fi
+                  
+                  # Final verification
+                  echo "📋 Final summary - Remaining releases:"
+                  gh release list --repo "$REPO" --limit 10 --json tagName,createdAt,prerelease | jq -r 'sort_by(.createdAt) | reverse | .[] | "\(.tagName) - \(.createdAt) - \(if .prerelease then "Beta" else "Production" end)"'
+
+            - name: Summary
+              run: |
+                  echo "✅ Cleanup job completed successfully!"
