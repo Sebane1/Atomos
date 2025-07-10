@@ -265,7 +265,7 @@ public class DownloadManagerService : IDownloadManagerService
             // Google Drive conversion
             if (host.Contains("drive.google.com") || host.Contains("docs.google.com"))
             {
-                return ConvertGoogleDriveUrl(originalUrl);
+                return await ConvertGoogleDriveUrl(originalUrl);
             }
 
             // Mega.nz conversion
@@ -290,34 +290,19 @@ public class DownloadManagerService : IDownloadManagerService
         }
     }
 
-    private string ConvertGoogleDriveUrl(string url)
+    private async Task<string> ConvertGoogleDriveUrl(string url)
     {
         try
         {
             // Convert Google Drive share URLs to direct download
             // From: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
             // To: https://drive.google.com/uc?export=download&id=FILE_ID
-
-            var fileIdMatch = Regex.Match(url, @"/file/d/([a-zA-Z0-9_-]+)");
-            if (fileIdMatch.Success)
-            {
-                var fileId = fileIdMatch.Groups[1].Value;
-                var directUrl = $"https://drive.google.com/uc?export=download&id={fileId}";
-                _logger.Debug("Converted Google Drive URL: {Original} -> {Direct}", url, directUrl);
-                return directUrl;
-            }
-
-            // Handle other Google Drive URL formats
-            var idMatch = Regex.Match(url, @"[?&]id=([a-zA-Z0-9_-]+)");
-            if (idMatch.Success)
-            {
-                var fileId = idMatch.Groups[1].Value;
-                var directUrl = $"https://drive.google.com/uc?export=download&id={fileId}";
-                _logger.Debug("Converted Google Drive URL: {Original} -> {Direct}", url, directUrl);
-                return directUrl;
-            }
-
-            _logger.Warn("Could not extract file ID from Google Drive URL: {Url}", url);
+            _logger.Debug("Google URL conversion not yet implemented: {Url}", url);
+            await _notificationService.ShowNotification(
+                "Download error",
+                $"Google URL conversion not yet implemented: {url}",
+                SoundType.GeneralChime
+                );
             return url;
         }
         catch (Exception ex)
