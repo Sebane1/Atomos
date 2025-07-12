@@ -60,7 +60,8 @@
                     <!-- Minimize Button -->
                     <Button Name="MinimizeButton" 
                             Classes="windowControl" 
-                            ToolTip.Tip="Minimize">
+                            ToolTip.Tip="Minimize"
+                            Cursor="Hand">
                         <Path Width="12" Height="2" Stretch="None">
                             <Path.Data>
                                 <StreamGeometry>
@@ -73,7 +74,8 @@
                     <!-- Close Button -->
                     <Button Name="CloseButton" 
                             Classes="windowControl closeButton"
-                            ToolTip.Tip="Close">
+                            ToolTip.Tip="Close"
+                            Cursor="Hand">
                         <Path Width="12" Height="12" Stretch="None">
                             <Path.Data>
                                 <StreamGeometry>
@@ -108,7 +110,8 @@
                     <ListBox Grid.Row="1" 
                             Classes="navItems" 
                             ItemsSource="{Binding MenuItems}" 
-                            SelectedItem="{Binding SelectedMenuItem}">
+                            SelectedItem="{Binding SelectedMenuItem}"
+                            Cursor="Hand">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="models:MenuItem">
                                 <StackPanel Orientation="Horizontal" Spacing="16">
@@ -127,7 +130,8 @@
                         <!-- Settings Button -->
                         <Button Command="{Binding NavigateToSettingsCommand}" 
                                 Classes="navButton"
-                                Margin="16,0,16,8">
+                                Margin="16,0,16,8"
+                                Cursor="Hand">
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <PathIcon Data="{StaticResource SettingsIcon}"/>
                                 <TextBlock Text="Settings" VerticalAlignment="Center"/>
@@ -137,7 +141,8 @@
                         <!-- About Button -->
                         <Button Command="{Binding NavigateToAboutCommand}" 
                                 Classes="navButton"
-                                Margin="16,0,16,0">
+                                Margin="16,0,16,0"
+                                Cursor="Hand">
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <PathIcon Data="{StaticResource InfoIcon}"/>
                                 <TextBlock Text="About" VerticalAlignment="Center"/>
