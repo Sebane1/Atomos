@@ -108,7 +108,7 @@ namespace Atomos.UI.Views
                 if ((bool)_configuration.ReturnConfigValue(x => x.UI.CloseToTray)) 
                 {
                     HiddenWindows.HideMainWindow();
-                    _logger.Info("Close button clicked, but minimizing to tray is enabled. Use tray to fully close application.");
+                    _logger.Info("Close button clicked, however close to tray is enabled. Use tray to fully close application.");
                 } else 
                 {
                     Close();
