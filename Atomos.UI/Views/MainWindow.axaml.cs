@@ -99,8 +99,12 @@ namespace Atomos.UI.Views
             this.Get<Button>("MinimizeButton").Click += (s, e) =>
             {
                 _logger.Info("Minimize button clicked");
-                // Minimize to taskbar
-                WindowState = WindowState.Minimized;
+                if ((bool)_configuration.ReturnConfigValue(x => x.UI.MinimizeToTray)) {
+                    HiddenWindows.HideMainWindow();
+                } else {
+                    // Minimize to taskbar
+                    WindowState = WindowState.Minimized;
+                }
             };
 
             this.Get<Button>("CloseButton").Click += (s, e) =>
