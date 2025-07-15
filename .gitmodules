@@ -1,5 +1,5 @@
-[submodule "PMF.CommonLib"]
-	path = PMF.CommonLib
+[submodule "CommonLib"]
+	path = CommonLib
 	url = https://github.com/Sebane1/PMF.CommonLib.git
 [submodule "PluginManager"]
 	path = PluginManager
